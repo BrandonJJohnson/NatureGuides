@@ -20,6 +20,9 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
 .hdr-eye{font-family:var(--f-ui);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
 .hdr-title{font-family:var(--f-disp);font-size:clamp(2rem,5vw,3.4rem);font-weight:normal;color:var(--text-pale);line-height:1.1;text-wrap:balance;margin-bottom:.5rem}
 .hdr-sub{font-size:.92rem;color:var(--muted);font-style:italic}
+.home-link{display:inline-flex;align-items:center;gap:.4em;font-family:var(--f-ui);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-bottom:1.25rem;transition:color .15s}
+.home-link:hover{color:var(--text-pale)}
+.home-link::before{content:'←'}
 
 /* ── Tabs ── */
 .tabs{background:var(--cypress);border-bottom:2px solid #000}
@@ -200,6 +203,7 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
 
 <header class="guide-header">
   <div class="header-inner">
+    <a class="home-link" href="index.html">All Field Guides</a>
     <div class="hdr-eye">Field Identification Key · 14 Species</div>
     <h1 class="hdr-title">Lizards &amp; Skinks of Louisiana</h1>
     <p class="hdr-sub">Interactive dichotomous key — answer questions step by step to identify any lizard you encounter</p>

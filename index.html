@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Louisiana Herp Field Guides</title>
+<meta name="description" content="Interactive dichotomous keys and photo field guides to the frogs, lizards, snakes, and salamanders of Louisiana.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --swamp:#0D1A0B;--cypress:#162914;--ink:#1A2A16;
+  --parchment:#EDE4CE;--card:#F4EDD8;--aged:#DDD0B0;--border:#BEA87C;
+  --muted:#8A9E80;--safe:#3A6830;--safe-tint:#E4F0E0;--gold:#9A7C24;--text-pale:#D8CCAA;
+  --f-disp:'Palatino Linotype','Palatino','Book Antiqua',Georgia,serif;
+  --f-body:Georgia,'Times New Roman',serif;
+  --f-ui:'Trebuchet MS','Arial Narrow',Arial,sans-serif;
+}
+body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.65;min-height:100vh}
+
+/* ── Header ── */
+.guide-header{background:var(--swamp);position:relative;overflow:hidden}
+.guide-header::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Ccircle cx='60' cy='60' r='40' stroke='%23ffffff06' stroke-width='2' fill='none'/%3E%3Ccircle cx='60' cy='60' r='20' stroke='%23ffffff04' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") repeat;pointer-events:none}
+.header-inner{position:relative;max-width:1100px;margin:0 auto;padding:3.5rem 1.5rem 3rem;text-align:center}
+.hdr-eye{font-family:var(--f-ui);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
+.hdr-title{font-family:var(--f-disp);font-size:clamp(2.2rem,6vw,3.8rem);font-weight:normal;color:var(--text-pale);line-height:1.1;text-wrap:balance;margin-bottom:.75rem}
+.hdr-sub{font-size:.98rem;color:var(--muted);font-style:italic;max-width:560px;margin:0 auto}
+
+/* ── Main ── */
+.main-inner{max-width:1100px;margin:0 auto;padding:3rem 1.5rem 4rem}
+
+.guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem}
+
+.guide-card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-top:4px solid var(--safe);border-radius:3px;overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow .15s,transform .15s}
+.guide-card:hover{box-shadow:0 6px 24px rgba(13,26,11,.18);transform:translateY(-3px)}
+
+.card-glyph{height:120px;display:flex;align-items:center;justify-content:center;background:var(--swamp);position:relative;overflow:hidden}
+.card-glyph::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Ccircle cx='60' cy='60' r='40' stroke='%23ffffff08' stroke-width='2' fill='none'/%3E%3Ccircle cx='60' cy='60' r='20' stroke='%23ffffff05' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") repeat}
+.card-glyph svg{position:relative;width:52px;height:52px;stroke:var(--text-pale);fill:none;stroke-width:1.4}
+
+.card-body{padding:1.5rem;flex:1;display:flex;flex-direction:column}
+.card-eyebrow{font-family:var(--f-ui);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:.4rem}
+.card-name{font-family:var(--f-disp);font-size:1.45rem;font-weight:normal;line-height:1.2;margin-bottom:.6rem}
+.card-desc{font-size:.85rem;color:#4A5C40;line-height:1.6;margin-bottom:1.1rem;flex:1}
+.card-cta{font-family:var(--f-ui);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--safe);display:inline-flex;align-items:center;gap:.4em}
+.card-cta::after{content:'→';transition:transform .15s}
+.guide-card:hover .card-cta::after{transform:translateX(4px)}
+
+/* ── Footer ── */
+.site-footer{border-top:1px solid var(--border);padding:1.5rem;text-align:center}
+.site-footer p{font-family:var(--f-ui);font-size:.68rem;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<header class="guide-header">
+  <div class="header-inner">
+    <div class="hdr-eye">Louisiana Field Guides</div>
+    <h1 class="hdr-title">Herpetofauna of Louisiana</h1>
+    <p class="hdr-sub">Interactive dichotomous keys and photo field guides for identifying the frogs, lizards, snakes, and salamanders found across the state</p>
+  </div>
+</header>
+
+<main class="main-inner">
+  <div class="guide-grid">
+
+    <a class="guide-card" href="LouisianaFrogIdentificationKey.html">
+      <div class="card-glyph">
+        <svg viewBox="0 0 64 64"><ellipse cx="32" cy="40" rx="18" ry="14"/><circle cx="20" cy="22" r="7"/><circle cx="44" cy="22" r="7"/><circle cx="20" cy="22" r="2.5" fill="var(--text-pale)" stroke="none"/><circle cx="44" cy="22" r="2.5" fill="var(--text-pale)" stroke="none"/><path d="M22 46q10 8 20 0"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-eyebrow">Field Key · 31 Species</div>
+        <h2 class="card-name">Frogs &amp; Toads</h2>
+        <p class="card-desc">Identify 31 species of Louisiana frogs and toads with a step-by-step key, photo gallery, and calls via iNaturalist.</p>
+        <span class="card-cta">Open the key</span>
+      </div>
+    </a>
+
+    <a class="guide-card" href="LouisianaLizardsIdentificationKey.html">
+      <div class="card-glyph">
+        <svg viewBox="0 0 64 64"><path d="M10 36c4-6 10-9 16-8 5-9 13-13 22-10-2 4-1 7 2 9-3 5-9 6-13 4-4 5-11 7-17 5-3 5-8 7-13 5z"/><circle cx="48" cy="18" r="2.2" fill="var(--text-pale)" stroke="none"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-eyebrow">Field Key · 14 Species</div>
+        <h2 class="card-name">Lizards &amp; Skinks</h2>
+        <p class="card-desc">Work through habitats and features to identify any of the 14 lizard and skink species native to Louisiana.</p>
+        <span class="card-cta">Open the key</span>
+      </div>
+    </a>
+
+    <a class="guide-card" href="LouisianaSnakeIdentificationKey.html">
+      <div class="card-glyph">
+        <svg viewBox="0 0 64 64"><path d="M12 50c4-10-6-12-6-22s12-10 12-20c0 10 14 6 14 18s-14 8-14 18c0-8 10-6 10 4"/><circle cx="12" cy="28" r="2.2" fill="var(--text-pale)" stroke="none"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-eyebrow">Field Key · 35 Species</div>
+        <h2 class="card-name">Snakes</h2>
+        <p class="card-desc">Distinguish venomous species and look-alikes among the 38 snake species recorded in Louisiana, with habitat notes.</p>
+        <span class="card-cta">Open the key</span>
+      </div>
+    </a>
+
+    <a class="guide-card" href="LouisianaSalamandersIdentificationKey.html">
+      <div class="card-glyph">
+        <svg viewBox="0 0 64 64"><ellipse cx="30" cy="32" rx="14" ry="7"/><path d="M44 32c8-2 14 2 16-4M16 28c-6-6-12-6-14-2M16 36c-6 4-12 2-14-2"/><circle cx="20" cy="30" r="1.8" fill="var(--text-pale)" stroke="none"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-eyebrow">Field Key · 24 Species</div>
+        <h2 class="card-name">Salamanders</h2>
+        <p class="card-desc">Browse and identify the 24 salamander species of Louisiana with habitat, feature, and iNaturalist data.</p>
+        <span class="card-cta">Open the key</span>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p>Louisiana Field Identification Keys</p>
+</footer>
+
+</body>
+</html>

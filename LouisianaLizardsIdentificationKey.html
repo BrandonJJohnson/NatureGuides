@@ -198,8 +198,10 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
 .picker-label-by{font-size:.58rem;color:var(--muted);margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .picker-checkmark{position:absolute;top:.3rem;right:.3rem;background:var(--safe);color:#fff;font-size:.65rem;border-radius:50%;width:1.2rem;height:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;pointer-events:none}
 .picker-option.chosen .picker-checkmark{opacity:1}
-.picker-loading{grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--muted);font-style:italic}.photo-sort-select{font-family:var(--f-ui);font-size:.62rem;letter-spacing:.06em;background:var(--card);border:1px solid var(--border);color:var(--ink);padding:.28rem .5rem;border-radius:2px;cursor:pointer;max-width:140px;margin-left:auto}
-.photo-sort-select:focus{outline:none;border-color:var(--gold)}</style>
+.picker-loading{grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--muted);font-style:italic}.photo-sort-select{font-family:var(--f-ui);font-size:.62rem;letter-spacing:.06em;background:var(--card);border:1px solid var(--border);color:var(--ink);padding:.28rem .5rem;border-radius:2px;cursor:pointer;max-width:140px}
+.photo-sort-select:focus{outline:none;border-color:var(--gold)}
+.photo-controls{display:inline-flex;align-items:center;gap:.5rem;background:var(--aged);padding:.25rem .6rem .25rem .15rem;border-radius:2px}
+.photo-controls-label{font-family:var(--f-ui);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#5A6A50;padding-left:.4rem;white-space:nowrap}</style>
 
 <header class="guide-header">
   <div class="header-inner">
@@ -250,8 +252,11 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
           <button class="btn-back" onclick="goBack()">← Back</button>
           <button class="btn-restart" onclick="startKey()">Start Over</button>
           <button class="refresh-btn refresh-inat-btn" onclick="refreshInatData()" style="margin-left:auto">↻ Refresh Counts</button>
-          <select class="photo-sort-select" title="Photo source"><option value="quality_grade=research&amp;order_by=votes&amp;order=desc">Most Favorited</option><option value="quality_grade=any&amp;order_by=votes&amp;order=desc">Most Voted On</option><option value="quality_grade=research&amp;order_by=observed_on&amp;order=desc">Most Recent</option><option value="quality_grade=research&amp;order_by=votes&amp;order=desc&amp;has[]=notes&amp;identified=true">Most Data</option></select>
-          <button class="refresh-btn refresh-photo-btn" onclick="refreshPhotos(this)" style="margin-left:0" title="Fetch best CC-licensed photos from iNaturalist (requires internet)">↻ Refresh Photos</button>
+          <span class="photo-controls">
+            <label class="photo-controls-label" for="photoSortKeynav">Sort:</label>
+            <select id="photoSortKeynav" class="photo-sort-select" title="Photo source"><option value="quality_grade=research&amp;order_by=votes&amp;order=desc">Most Favorited</option><option value="quality_grade=any&amp;order_by=votes&amp;order=desc">Most Voted On</option><option value="quality_grade=research&amp;order_by=observed_on&amp;order=desc">Most Recent</option><option value="quality_grade=research&amp;order_by=votes&amp;order=desc&amp;has[]=notes&amp;identified=true">Most Data</option></select>
+            <button class="refresh-btn refresh-photo-btn" onclick="refreshPhotos(this)" title="Fetch best CC-licensed photos from iNaturalist (requires internet)">↻ Refresh Photos</button>
+          </span>
           <span class="refresh-status" style="align-self:center"></span>
         </div>
       </div>
@@ -277,8 +282,11 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
       <button class="filter-btn" onclick="filterGallery('small',this)">Small (&lt;6 in)</button>
       <button class="filter-btn" onclick="filterGallery('rare',this)">Rare in LA</button>
       <button class="refresh-btn refresh-inat-btn" onclick="refreshInatData()">↻ Refresh iNat Counts</button>
-      <select class="photo-sort-select" title="Photo source"><option value="quality_grade=research&amp;order_by=votes&amp;order=desc">Most Favorited</option><option value="quality_grade=any&amp;order_by=votes&amp;order=desc">Most Voted On</option><option value="quality_grade=research&amp;order_by=observed_on&amp;order=desc">Most Recent</option><option value="quality_grade=research&amp;order_by=votes&amp;order=desc&amp;has[]=notes&amp;identified=true">Most Data</option></select>
-      <button class="refresh-btn refresh-photo-btn" onclick="refreshPhotos(this)" style="margin-left:0" title="Fetch the highest-voted CC-licensed photo for each species from iNaturalist (requires internet)">↻ Refresh Photos</button>
+      <span class="photo-controls" style="margin-left:auto">
+        <label class="photo-controls-label" for="photoSortGallery">Sort:</label>
+        <select id="photoSortGallery" class="photo-sort-select" title="Photo source"><option value="quality_grade=research&amp;order_by=votes&amp;order=desc">Most Favorited</option><option value="quality_grade=any&amp;order_by=votes&amp;order=desc">Most Voted On</option><option value="quality_grade=research&amp;order_by=observed_on&amp;order=desc">Most Recent</option><option value="quality_grade=research&amp;order_by=votes&amp;order=desc&amp;has[]=notes&amp;identified=true">Most Data</option></select>
+        <button class="refresh-btn refresh-photo-btn" onclick="refreshPhotos(this)" title="Fetch the highest-voted CC-licensed photo for each species from iNaturalist (requires internet)">↻ Refresh Photos</button>
+      </span>
       <span class="refresh-status"></span>
     </div>
     <div class="gallery-grid" id="gallery-grid"></div>
@@ -797,7 +805,7 @@ async function refreshInatData() {
 ──────────────────────────────────────── */
 async function refreshPhotos(btn) {
   const statuses = document.querySelectorAll('.refresh-status');
-  const sel = document.querySelector('.photo-sort-select');
+  const sel = btn && btn.parentElement.querySelector('.photo-sort-select');
   const sortParams = sel ? sel.value : 'quality_grade=research&order_by=votes&order=desc';
   if (btn) { btn.disabled = true; btn.textContent = '↻ Refreshing…'; }
   statuses.forEach(s => { s.textContent = 'Connecting…'; });

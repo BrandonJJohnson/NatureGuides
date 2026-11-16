@@ -75,13 +75,6 @@
           "href": "LouisianaGameBirdsIdentificationKey.html",
           "ancestor": 3,
           "sound": "Play Call"
-        },
-        {
-          "label": "All Birds (combined)",
-          "href": "LouisianaBirdIdentificationKey.html",
-          "ancestor": 3,
-          "sound": "Play Call",
-          "hidden": true
         }
       ]
     },

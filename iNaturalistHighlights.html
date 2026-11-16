@@ -965,7 +965,9 @@
       userSection(o.username).obs.push({ ...o, taxon: dict.ref(o.taxon) });
     }
     const orphanVer = [];
+    summary.screened = 0;
     for (const v of verAll) {
+      if (v.status === 'screened' && owner.has(obsIdFromVerifyKey(v.key))) summary.screened++;
       const u = owner.get(obsIdFromVerifyKey(v.key));
       if (u) userSection(u).ver.push(v);
       else if (!selection) orphanVer.push(v); // its observation is gone; keep it in a full backup anyway
@@ -1026,7 +1028,8 @@
 
   function summarizeBackup(s) {
     const n = (x) => (x || 0).toLocaleString();
-    const users = `${n(s.users)} user${s.users === 1 ? '' : 's'} (${n(s.observations)} observations, ${n(s.verifications)} first-record checks)`;
+    const pending = s.screened ? `, ${n(s.screened)} still awaiting the exact check` : '';
+    const users = `${n(s.users)} user${s.users === 1 ? '' : 's'} (${n(s.observations)} observations, ${n(s.verifications)} first-record checks${pending})`;
     const places = `${n(s.places)} place${s.places === 1 ? '' : 's'} (${n(s.species)} species, ${n(s.records)} species records)`;
     return `${users} and ${places}${s.bytes != null ? ` — ${formatBytes(s.bytes)}` : ''}`;
   }
@@ -2403,13 +2406,15 @@
     for (const c of candidates) {
       const key = verifyKey(c.obs.id, c.place.id, c.obs.taxon.id);
       const cached = verMap.get(key);
-      if (cached && cached.status && cached.status !== 'pending' && cached.status !== 'error') {
+      if (cached && cached.status && cached.status !== 'pending' && cached.status !== 'error' && cached.status !== 'screened') {
         state.verifyResults[key] = cached;
         done++;
         if (cached.status === 'confirmed') confirmed++;
       } else {
         state.verifyResults[key] = { key, status: 'pending' };
-        queue.push({ ...c, key });
+        // 'screened' = already passed step 1 in an earlier session (or an imported backup),
+        // so it goes straight to the exact check instead of being bulk-screened again.
+        queue.push({ ...c, key, screened: !!(cached && cached.status === 'screened') });
       }
     }
     state.verifyProgress = { done, total: candidates.length, confirmed };
@@ -2472,9 +2477,16 @@
       // an earlier record is definitely not a first. Sightings are clustered by outing, so this
       // replaces dozens of per-species requests with one. (Casual-grade sightings can never be the
       // earliest verifiable record, so they're settled without a request.)
+      // Sightings that pass screening are saved as 'screened' right away, so step-1 work survives
+      // a stop, a closed tab, switching users, or an export/import made before step 2 finished.
       const survivors = [];
+      const saveScreened = (list) => {
+        if (!list.length) return;
+        idbPutMany(db, 'verifications', list.map((c) => ({ key: c.key, status: 'screened', level: c.level, checkedAt: Date.now() })));
+      };
       const groups = new Map();
       for (const c of queue) {
+        if (c.screened) { survivors.push(c); prog.screened++; continue; }
         if (c.obs.quality_grade === 'casual') { saveVerdict(c, notFirst(c)); continue; }
         if (!c.obs.observed_on) { survivors.push(c); prog.screened++; continue; }
         const gk = `${c.level}|${c.place.id}|${c.obs.observed_on}`;
@@ -2513,10 +2525,12 @@
         try {
           const earlier = await countEarlierRecords(b.items, isCancelled);
           if (stale()) return;
+          const passed = [];
           for (const c of b.items) {
             if (earlier.get(c.obs.taxon.id) > 0) saveVerdict(c, notFirst(c));
-            else { survivors.push(c); prog.screened++; }
+            else { survivors.push(c); passed.push(c); prog.screened++; }
           }
+          saveScreened(passed);
         } catch (e) {
           if (stale()) return;
           if (!b.retried) { batches.push({ ...b, retried: true }); prog.reqTotal = batches.length; }

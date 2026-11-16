@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Louisiana Herp Field Guides</title>
-<meta name="description" content="Interactive dichotomous keys and photo field guides to the frogs, lizards, snakes, salamanders, turtles, birds, and mammals of Louisiana.">
+<title>Louisiana Field Guides</title>
+<meta name="description" content="Interactive dichotomous keys and photo field guides to the amphibians, reptiles, birds, mammals, butterflies, moths, and velvet ants of Louisiana, plus iNaturalist reports.">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -46,18 +46,62 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
 .card-cta::after{content:'→';transition:transform .15s}
 .guide-card:hover .card-cta::after{transform:translateX(4px)}
 
+/* ── Sections ── */
+.section-title{font-family:var(--f-disp);font-weight:normal;font-size:1.6rem;margin:3rem 0 .35rem}
+.section-sub{font-size:.9rem;color:#4A5C40;margin-bottom:1.25rem}
+.card-glyph.inat{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1c3a17,#0D1A0B)}
+.card-glyph.inat svg{width:72px;height:72px;opacity:.9}
+
 /* ── Footer ── */
 .site-footer{border-top:1px solid var(--border);padding:1.5rem;text-align:center}
 .site-footer p{font-family:var(--f-ui);font-size:.68rem;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
 </style>
-</head>
+
+<!--nd:begin head--><style>
+/* Site navigation — identical on every page. Self-contained colors/fonts so it
+   looks the same on the field guides, the homepage and the iNaturalist reports. */
+.nd-nav{--nd-bg:#0D1A0B;--nd-bg2:#162914;--nd-text:#D8CCAA;--nd-muted:#8A9E80;--nd-gold:#9A7C24;--nd-line:#2a3d26;
+  background:var(--nd-bg);border-bottom:1px solid #000;position:sticky;top:0;z-index:400;
+  font-family:'Trebuchet MS','Arial Narrow',Arial,sans-serif;font-size:14px;line-height:1.4;color:var(--nd-text);
+  color-scheme:dark}
+.nd-nav *,.nd-nav *::before,.nd-nav *::after{box-sizing:border-box;margin:0;padding:0}
+.nd-nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:1rem;min-height:44px}
+.nd-brand{font-family:'Palatino Linotype','Palatino','Book Antiqua',Georgia,serif;font-size:1rem;color:var(--nd-text);text-decoration:none;white-space:nowrap;letter-spacing:.01em}
+.nd-brand:hover{color:#fff}
+.nd-toggle{display:none;margin-left:auto;background:none;border:1px solid var(--nd-line);color:var(--nd-text);font:inherit;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px;cursor:pointer}
+.nd-menu{list-style:none;display:flex;align-items:stretch;gap:.15rem;margin-left:auto}
+.nd-menu>li{position:relative;display:flex}
+.nd-menu>li>a,.nd-drop>summary{display:flex;align-items:center;gap:.35em;padding:.75rem .7rem;color:var(--nd-muted);text-decoration:none;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;list-style:none;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}
+.nd-drop>summary::-webkit-details-marker{display:none}
+.nd-drop>summary::after{content:'';width:.4em;height:.4em;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-.15em) rotate(45deg);opacity:.7}
+.nd-menu>li>a:hover,.nd-drop>summary:hover,.nd-drop[open]>summary{color:var(--nd-text)}
+.nd-menu>li>a.nd-current,.nd-drop.nd-current>summary{color:var(--nd-text);border-bottom-color:var(--nd-gold)}
+.nd-panel{position:absolute;top:100%;right:0;min-width:230px;background:var(--nd-bg2);border:1px solid #000;border-top:2px solid var(--nd-gold);box-shadow:0 10px 30px rgba(0,0,0,.45);padding:.35rem 0;z-index:401}
+.nd-panel a{display:block;padding:.5rem 1rem;color:var(--nd-text);text-decoration:none;font-size:.85rem;letter-spacing:.02em}
+.nd-panel a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nd-panel a.nd-current{color:#fff;box-shadow:inset 3px 0 0 var(--nd-gold)}
+.nd-panel small{display:block;color:var(--nd-muted);font-size:.72rem;letter-spacing:0;margin-top:.1rem}
+.nd-inat>summary{color:#9fd39a}
+@media (max-width:760px){
+  .nd-toggle{display:block}
+  .nd-menu{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;background:var(--nd-bg2);border-bottom:2px solid var(--nd-gold);padding:.25rem 0;margin:0;max-height:calc(100vh - 44px);overflow-y:auto}
+  .nd-nav.nd-open .nd-menu{display:flex}
+  .nd-menu>li{display:block}
+  .nd-menu>li>a,.nd-drop>summary{padding:.7rem 1.5rem;border-bottom:none}
+  .nd-drop>summary{justify-content:space-between}
+  .nd-panel{position:static;box-shadow:none;border:none;background:transparent;padding:0 0 .4rem}
+  .nd-panel a{padding:.45rem 2.25rem}
+}
+@media print{.nd-nav{display:none!important}}
+</style><!--nd:end head--></head>
 <body>
+<!--nd:begin nav--><nav class="nd-nav" aria-label="Field guides"><div class="nd-nav-inner"><a class="nd-brand" href="index.html">Louisiana Field Guides</a><button class="nd-toggle" type="button" aria-expanded="false" aria-controls="nd-menu">Menu</button><ul class="nd-menu" id="nd-menu"><li><a href="index.html" class="nd-current">Home</a></li><li><details class="nd-drop"><summary>Amphibians &amp; Reptiles</summary><div class="nd-panel"><a href="LouisianaFrogIdentificationKey.html">Frogs &amp; Toads</a><a href="LouisianaSalamandersIdentificationKey.html">Salamanders</a><a href="LouisianaLizardsIdentificationKey.html">Lizards &amp; Skinks</a><a href="LouisianaSnakeIdentificationKey.html">Snakes</a><a href="LouisianaTurtleIdentificationKey.html">Turtles</a></div></details></li><li><details class="nd-drop"><summary>Birds</summary><div class="nd-panel"><a href="LouisianaPasserinesIdentificationKey.html">Passerines (Songbirds)</a><a href="LouisianaRaptorsIdentificationKey.html">Raptors</a><a href="LouisianaWaterfowlIdentificationKey.html">Waterfowl</a><a href="LouisianaShorebirdsWadersIdentificationKey.html">Shorebirds &amp; Waders</a><a href="LouisianaSeabirdsIdentificationKey.html">Seabirds</a><a href="LouisianaGameBirdsIdentificationKey.html">Game Birds</a></div></details></li><li><a href="LouisianaMammalIdentificationKey.html">Mammals</a></li><li><details class="nd-drop"><summary>Insects</summary><div class="nd-panel"><a href="LouisianaButterflyIdentificationKey.html">Butterflies</a><a href="LouisianaUnderwingMothIdentificationKey.html">Underwing Moths</a><a href="LouisianaVelvetAntIdentificationKey.html">Velvet Ants</a></div></details></li><li><details class="nd-drop nd-inat"><summary>iNaturalist Reports</summary><div class="nd-panel"><a href="iNaturalistHighlights.html">iNaturalist Highlights<small>Lifers, firsts and notable finds by user or place</small></a></div></details></li></ul></div></nav><!--nd:end nav-->
 
 <header class="guide-header">
   <div class="header-inner">
     <div class="hdr-eye">Louisiana Field Guides</div>
     <h1 class="hdr-title">Wildlife of Louisiana</h1>
-    <p class="hdr-sub">Interactive dichotomous keys and photo field guides for identifying the frogs, lizards, snakes, salamanders, turtles, birds, and mammals found across the state</p>
+    <p class="hdr-sub">Interactive dichotomous keys and photo field guides for identifying the amphibians, reptiles, birds, mammals, and insects found across the state</p>
   </div>
 </header>
 
@@ -245,12 +289,53 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
     </a>
 
   </div>
+
+  <h2 class="section-title" id="inaturalist">iNaturalist Reports</h2>
+  <p class="section-sub">Tools that pull live data from iNaturalist to summarize what people are finding.</p>
+  <div class="guide-grid">
+    <a class="guide-card" href="iNaturalistHighlights.html">
+      <div class="card-glyph inat">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="none" stroke="#9fd39a" stroke-width="3"/><path d="M32 14v6M32 44v6M14 32h6M44 32h6" stroke="#9fd39a" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="6" fill="#D8CCAA"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-eyebrow">Report · Live iNaturalist data</div>
+        <h2 class="card-name">iNaturalist Highlights</h2>
+        <p class="card-desc">Search by user for lifers and parish, state, country, and world firsts — or by place for its species list, notable finds, and who found each species first. Export results as a report.</p>
+        <span class="card-cta">Open the report</span>
+      </div>
+    </a>
+  </div>
 </main>
 
 <footer class="site-footer">
   <p>Louisiana Field Identification Keys · Photos: iNaturalist contributors (CC BY-NC / CC0)</p>
 </footer>
 
-</body>
+
+<!--nd:begin script--><script>
+/* Site navigation behaviour: mobile toggle, one dropdown open at a time. */
+(function () {
+  var nav = document.querySelector('.nd-nav');
+  if (!nav) return;
+  var toggle = nav.querySelector('.nd-toggle');
+  var drops = nav.querySelectorAll('.nd-drop');
+  if (toggle) toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('nd-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  drops.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (d.open) drops.forEach(function (o) { if (o !== d) o.open = false; });
+    });
+  });
+  function closeAll() {
+    drops.forEach(function (d) { d.open = false; });
+    nav.classList.remove('nd-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+  document.addEventListener('click', function (e) { if (!nav.contains(e.target)) closeAll(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+})();
+</script><!--nd:end script--></body>
 </html>
 

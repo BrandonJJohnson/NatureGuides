@@ -1,4 +1,9 @@
-﻿<title>Louisiana Waterfowl Identification Key</title>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Louisiana Waterfowl Identification Key</title>
 <meta name="description" content="Interactive dichotomous key and photo field guide to 23 species of Louisiana ducks, geese, and whistling-ducks, with seasonal occurrence, habitats, features, and iNaturalist data.">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -219,9 +224,71 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
 .photo-controls{display:inline-flex;align-items:center;gap:.5rem;background:var(--aged);padding:.25rem .6rem .25rem .15rem;border-radius:2px}
 .photo-controls-label{font-family:var(--f-ui);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#5A6A50;padding-left:.4rem;white-space:nowrap}</style>
 
+<!--nd:begin head--><style>
+/* Site navigation — identical on every page. Self-contained colors/fonts so it
+   looks the same on the field guides, the homepage and the iNaturalist reports. */
+.nd-nav{--nd-bg:#0D1A0B;--nd-bg2:#162914;--nd-text:#D8CCAA;--nd-muted:#8A9E80;--nd-gold:#9A7C24;--nd-line:#2a3d26;
+  background:var(--nd-bg);border-bottom:1px solid #000;position:sticky;top:0;z-index:400;
+  font-family:'Trebuchet MS','Arial Narrow',Arial,sans-serif;font-size:14px;line-height:1.4;color:var(--nd-text);
+  color-scheme:dark}
+.nd-nav *,.nd-nav *::before,.nd-nav *::after{box-sizing:border-box;margin:0;padding:0}
+.nd-nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:1rem;min-height:44px}
+.nd-brand{font-family:'Palatino Linotype','Palatino','Book Antiqua',Georgia,serif;font-size:1rem;color:var(--nd-text);text-decoration:none;white-space:nowrap;letter-spacing:.01em}
+.nd-brand:hover{color:#fff}
+.nd-toggle{display:none;margin-left:auto;background:none;border:1px solid var(--nd-line);color:var(--nd-text);font:inherit;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px;cursor:pointer}
+.nd-menu{list-style:none;display:flex;align-items:stretch;gap:.15rem;margin-left:auto}
+.nd-menu>li{position:relative;display:flex}
+.nd-menu>li>a,.nd-drop>summary{display:flex;align-items:center;gap:.35em;padding:.75rem .7rem;color:var(--nd-muted);text-decoration:none;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;list-style:none;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}
+.nd-drop>summary::-webkit-details-marker{display:none}
+.nd-drop>summary::after{content:'';width:.4em;height:.4em;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-.15em) rotate(45deg);opacity:.7}
+.nd-menu>li>a:hover,.nd-drop>summary:hover,.nd-drop[open]>summary{color:var(--nd-text)}
+.nd-menu>li>a.nd-current,.nd-drop.nd-current>summary{color:var(--nd-text);border-bottom-color:var(--nd-gold)}
+.nd-panel{position:absolute;top:100%;right:0;min-width:230px;background:var(--nd-bg2);border:1px solid #000;border-top:2px solid var(--nd-gold);box-shadow:0 10px 30px rgba(0,0,0,.45);padding:.35rem 0;z-index:401}
+.nd-panel a{display:block;padding:.5rem 1rem;color:var(--nd-text);text-decoration:none;font-size:.85rem;letter-spacing:.02em}
+.nd-panel a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nd-panel a.nd-current{color:#fff;box-shadow:inset 3px 0 0 var(--nd-gold)}
+.nd-panel small{display:block;color:var(--nd-muted);font-size:.72rem;letter-spacing:0;margin-top:.1rem}
+.nd-inat>summary{color:#9fd39a}
+@media (max-width:760px){
+  .nd-toggle{display:block}
+  .nd-menu{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;background:var(--nd-bg2);border-bottom:2px solid var(--nd-gold);padding:.25rem 0;margin:0;max-height:calc(100vh - 44px);overflow-y:auto}
+  .nd-nav.nd-open .nd-menu{display:flex}
+  .nd-menu>li{display:block}
+  .nd-menu>li>a,.nd-drop>summary{padding:.7rem 1.5rem;border-bottom:none}
+  .nd-drop>summary{justify-content:space-between}
+  .nd-panel{position:static;box-shadow:none;border:none;background:transparent;padding:0 0 .4rem}
+  .nd-panel a{padding:.45rem 2.25rem}
+}
+@media print{.nd-nav{display:none!important}}
+
+/* Shared field-guide features (sound player, photo picker button, live-count note).
+   Uses each guide's own palette variables so it matches the guide's theme. */
+.home-link{display:none!important}
+.result-photo-wrap{position:relative}
+.play-call-btn{font-family:var(--f-ui);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;background:var(--safe);color:#fff;border:none;padding:.55rem 1.25rem;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:background .12s}
+.play-call-btn:hover{background:#2d5225}
+.play-call-btn svg{width:12px;height:12px;fill:currentColor}
+.sp-audio-btn{display:flex;align-items:center;gap:.3rem;margin-top:.55rem;padding:.3rem .6rem;background:rgba(58,104,48,.1);border:1px solid rgba(58,104,48,.28);color:var(--safe);font-family:var(--f-ui);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;width:100%;transition:background .12s}
+.sp-audio-btn:hover{background:rgba(58,104,48,.2)}
+.sp-audio-btn svg{width:10px;height:10px;fill:currentColor;flex-shrink:0}
+#audio-bar{position:fixed;bottom:0;left:0;right:0;background:var(--swamp);color:var(--text-pale);padding:.5rem 1rem;z-index:200;display:none;align-items:center;gap:.7rem;border-top:2px solid var(--gold)}
+#audio-bar audio{flex:1;min-width:0;height:32px}
+#audio-label{font-family:var(--f-ui);font-size:.68rem;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;color:var(--muted)}
+#audio-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:0 .3rem;line-height:1;flex-shrink:0}
+#audio-close:hover{color:var(--text-pale)}
+.photo-pick-btn{position:absolute;bottom:.35rem;left:.35rem;background:rgba(13,26,11,.72);color:var(--text-pale);border:1px solid rgba(190,168,124,.4);font-family:var(--f-ui);font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;padding:.22em .55em;border-radius:2px;cursor:pointer;z-index:5;opacity:0;transition:opacity .15s}
+.result-photo-wrap:hover .photo-pick-btn,.photo-pick-btn:focus{opacity:1}
+@media (hover:none){.photo-pick-btn{opacity:1}}
+.nd-counts-note{font-family:var(--f-ui);font-size:.66rem;letter-spacing:.05em;color:var(--muted);text-align:center;margin-top:.6rem}
+.nd-counts-note.nd-busy::before{content:'';display:inline-block;width:.7em;height:.7em;margin-right:.45em;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:nd-spin .8s linear infinite}
+@keyframes nd-spin{to{transform:rotate(360deg)}}
+@media print{#audio-bar,.photo-pick-btn,.nd-counts-note{display:none!important}}
+</style><!--nd:end head--></head>
+<body>
+<!--nd:begin nav--><nav class="nd-nav" aria-label="Field guides"><div class="nd-nav-inner"><a class="nd-brand" href="index.html">Louisiana Field Guides</a><button class="nd-toggle" type="button" aria-expanded="false" aria-controls="nd-menu">Menu</button><ul class="nd-menu" id="nd-menu"><li><a href="index.html">Home</a></li><li><details class="nd-drop"><summary>Amphibians &amp; Reptiles</summary><div class="nd-panel"><a href="LouisianaFrogIdentificationKey.html">Frogs &amp; Toads</a><a href="LouisianaSalamandersIdentificationKey.html">Salamanders</a><a href="LouisianaLizardsIdentificationKey.html">Lizards &amp; Skinks</a><a href="LouisianaSnakeIdentificationKey.html">Snakes</a><a href="LouisianaTurtleIdentificationKey.html">Turtles</a></div></details></li><li><details class="nd-drop nd-current"><summary>Birds</summary><div class="nd-panel"><a href="LouisianaPasserinesIdentificationKey.html">Passerines (Songbirds)</a><a href="LouisianaRaptorsIdentificationKey.html">Raptors</a><a href="LouisianaWaterfowlIdentificationKey.html" class="nd-current" aria-current="page">Waterfowl</a><a href="LouisianaShorebirdsWadersIdentificationKey.html">Shorebirds &amp; Waders</a><a href="LouisianaSeabirdsIdentificationKey.html">Seabirds</a><a href="LouisianaGameBirdsIdentificationKey.html">Game Birds</a></div></details></li><li><a href="LouisianaMammalIdentificationKey.html">Mammals</a></li><li><details class="nd-drop"><summary>Insects</summary><div class="nd-panel"><a href="LouisianaButterflyIdentificationKey.html">Butterflies</a><a href="LouisianaUnderwingMothIdentificationKey.html">Underwing Moths</a><a href="LouisianaVelvetAntIdentificationKey.html">Velvet Ants</a></div></details></li><li><details class="nd-drop nd-inat"><summary>iNaturalist Reports</summary><div class="nd-panel"><a href="iNaturalistHighlights.html">iNaturalist Highlights<small>Lifers, firsts and notable finds by user or place</small></a></div></details></li></ul></div></nav><!--nd:end nav-->
+
 <header class="guide-header">
   <div class="header-inner">
-    <a class="home-link" href="index.html">All Field Guides</a>
     <div class="hdr-eye">Field Identification Key · 23 Species</div>
     <h1 class="hdr-title">Waterfowl of Louisiana</h1>
     <p class="hdr-sub">Interactive dichotomous key — answer questions step by step to identify any duck, goose, or whistling-duck you encounter</p>
@@ -250,11 +317,7 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
         <div style="font-size:.8rem;color:#7A8C70;text-align:center;line-height:1.7;">
           Waterfowl numbers and species mix shift dramatically with the seasons — most species here are winter residents, so timing your visit from fall through early spring will yield the most sightings.
         </div>
-        <div style="text-align:center;margin-top:1rem">
-          <button class="refresh-btn refresh-inat-btn" onclick="refreshInatData()">↻ Refresh iNaturalist Counts</button>
-          <button class="refresh-btn" onclick="refreshAudio(this)" style="margin-left:.4rem">▶ Refresh Audio</button>
-          <span class="refresh-status" style="display:block;margin-top:.4rem"></span>
-        </div>
+        <!--nd:begin keep-intro-tools--><div style="text-align:center;margin-top:1rem"><button class="refresh-btn refresh-inat-btn" onclick="refreshInatData()">↻ Refresh iNaturalist Counts</button><button class="refresh-btn" onclick="refreshAudio(this)" style="margin-left:.4rem">▶ Refresh Sounds</button><span class="refresh-status" style="display:block;margin-top:.4rem"></span><div class="nd-counts-note"></div></div><!--nd:end keep-intro-tools-->
       </div>
 
       <div id="key-step" style="display:none">
@@ -290,12 +353,12 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
     <div class="gallery-header">
       <h2>Species Gallery</h2>
       <p>23 species · click any card for full details · CC-licensed photos via iNaturalist</p>
-    </div>
+    <!--nd:begin gallery-note--><div class="nd-counts-note" style="text-align:inherit"></div><!--nd:end gallery-note--></div>
     <div class="filter-bar">
       <button class="filter-btn active" onclick="filterGallery('all',this)">All Species</button>
       <button class="filter-btn" onclick="filterGallery('waterfowl',this)">Waterfowl</button>
       <button class="filter-btn" onclick="filterGallery('rare',this)">Rare / Notable</button>
-    </div>
+    <!--nd:begin gallery-tools--><button class="refresh-btn refresh-inat-btn" onclick="refreshInatData()">↻ Refresh iNat Counts</button><span class="photo-controls" style="margin-left:auto"><label class="photo-controls-label" for="photoSortGallery">Sort:</label><select id="photoSortGallery" class="photo-sort-select" title="Photo source"><option value="quality_grade=research&amp;order_by=votes&amp;order=desc">Most Favorited</option><option value="quality_grade=any&amp;order_by=votes&amp;order=desc">Most Voted On</option><option value="quality_grade=research&amp;order_by=observed_on&amp;order=desc">Most Recent</option><option value="quality_grade=research&amp;order_by=votes&amp;order=desc&amp;has[]=notes&amp;identified=true">Most Data</option></select><button class="refresh-btn refresh-photo-btn" onclick="refreshPhotos(this)" title="Fetch the best CC-licensed photo for each species from iNaturalist (requires internet)">↻ Refresh Photos</button></span><span class="refresh-status"></span><!--nd:end gallery-tools--></div>
     <div class="gallery-grid" id="gallery-grid"></div>
   </div>
 </section>
@@ -332,7 +395,8 @@ body{background:var(--parchment);color:var(--ink);font-family:var(--f-body);font
   <button id="audio-close" onclick="stopAudio()" title="Close">&#x2715;</button>
 </div>
 
-<footer class="guide-footer">
+
+<!--nd:begin guide-markup--><div class="photo-picker-overlay hidden" id="photo-picker" onclick="closePhotoPicker(event)"><div class="photo-picker-box" onclick="event.stopPropagation()"><div class="picker-hdr"><h3 id="picker-title">Choose Photo</h3><div class="picker-hdr-btns"><button class="btn-picker-reset" onclick="resetPickerPhoto()">&#8635; Reset to Default</button><button class="btn-picker-close" onclick="closePhotoPicker()">&times;</button></div></div><div class="picker-sort-bar"><span class="picker-sort-label">Sort:</span><button class="picker-sort-btn active" onclick="setPickerSort(0,this)">Most Favorited</button><button class="picker-sort-btn" onclick="setPickerSort(1,this)">Most Voted</button><button class="picker-sort-btn" onclick="setPickerSort(2,this)">Most Recent</button><button class="picker-sort-btn" onclick="setPickerSort(3,this)">Most Data</button></div><p class="picker-hint">Click a photo to use it everywhere this species appears. Your choice is saved in this browser.</p><div class="picker-grid" id="picker-grid"></div></div></div><!--nd:end guide-markup--><footer class="guide-footer">
   Photos: iNaturalist contributors (CC BY-NC) · Identification key covers all regularly occurring Louisiana species · Juveniles may differ substantially from adult descriptions
 </footer>
 
@@ -1937,3 +2001,418 @@ function applyStoredPhotoOverrides() {
 }
 applyStoredPhotoOverrides();
 </script>
+<!--nd:begin script--><script>
+window.ND_GUIDE = {"id": "LouisianaWaterfowlIdentificationKey", "ancestor": 3, "placeId": 27, "soundLabel": "Play Call"};
+/* Shared field-guide runtime. Injected after each guide's own script by
+   tools/sync_shared.py and replaces/extends the per-guide functions so every
+   guide behaves the same:
+     - live Louisiana iNaturalist counts (auto, cached) drive the key's likelihoods
+     - safe photo loading: broken remote photos fall back to the embedded photo
+     - safe audio: one player, cancelled/failed loads never throw or leave junk
+     - polite iNaturalist requests: limited concurrency, retries on 429/5xx
+   Config comes from window.ND_GUIDE = {id, ancestor, placeId, soundLabel}. */
+(function () {
+  'use strict';
+  var CFG = window.ND_GUIDE || {};
+  var PLACE = CFG.placeId || 27;
+  var NS = 'nd:' + (CFG.id || location.pathname) + ':';
+  var COUNT_TTL = 12 * 60 * 60 * 1000;           // refresh counts twice a day
+  var SOUND = CFG.soundLabel || 'Play Sound';
+  var USABLE = { 'cc0': 1, 'cc-by': 1, 'cc-by-sa': 1, 'cc-by-nc': 1, 'cc-by-nc-sa': 1 };
+  var API = 'https://api.inaturalist.org/v1/';
+
+  /* ── storage that never throws (private mode, blocked storage, quota) ── */
+  var store = {
+    get: function (k) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+    raw: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  /* ── iNaturalist request queue: max 3 in flight, retry 429/5xx with backoff ── */
+  var queue = [], active = 0, MAX = 3;
+  function inat(path) {
+    return new Promise(function (resolve, reject) { queue.push({ url: API + path, resolve: resolve, reject: reject }); pump(); });
+  }
+  function pump() {
+    while (active < MAX && queue.length) {
+      var job = queue.shift(); active++;
+      run(job).then(function () { active--; pump(); });
+    }
+  }
+  function run(job) {
+    var attempt = 0;
+    function go() {
+      return fetch(job.url, { headers: { Accept: 'application/json' } }).then(function (r) {
+        if (r.ok) return r.json().then(job.resolve);
+        if ((r.status === 429 || r.status >= 500) && attempt < 3) { attempt++; return sleep(1200 * Math.pow(2, attempt)).then(go); }
+        job.reject(new Error('HTTP ' + r.status));
+      }, function (err) {
+        if (attempt < 1) { attempt++; return sleep(1500).then(go); }
+        job.reject(err);
+      });
+    }
+    return go().catch(job.reject);
+  }
+  window.ndInat = inat;
+
+  function sciOf(k) { return SPECIES[k] && SPECIES[k].sci; }
+  function nameOf(k) { return (SPECIES[k] && SPECIES[k].name) || k; }
+  function setStatus(msg) { $$('.refresh-status').forEach(function (s) { s.textContent = msg; }); }
+
+  /* ════════════════ PHOTOS ════════════════ */
+  var ORIGINAL = {};
+  Object.keys(PHOTOS).forEach(function (k) { ORIGINAL[k] = PHOTOS[k]; });
+  var refreshedKey = function (k) { return NS + 'photo:' + k; };
+
+  function chosenPhoto(k) {                    // photo picked by the user
+    var p = store.get('pp:' + k);
+    return p && p.url ? p : null;
+  }
+  function effectivePhoto(k) {
+    return chosenPhoto(k) || store.get(refreshedKey(k)) || null;
+  }
+  // Apply saved choices/refreshes so every later render uses them.
+  Object.keys(SPECIES).forEach(function (k) {
+    var p = effectivePhoto(k);
+    if (p) { PHOTOS[k] = p.url; if (p.by) SPECIES[k].by = p.by; }
+  });
+  // Older Frog-guide cache keys are superseded by the shared cache.
+  Object.keys(SPECIES).forEach(function (k) { if (store.raw('frog_photo:' + k)) store.del('frog_photo:' + k); });
+
+  function paint(k) {
+    $$('[data-species-photo="' + k + '"]').forEach(function (img) { if (img.getAttribute('src') !== PHOTOS[k]) img.src = PHOTOS[k]; });
+  }
+  function keyForUrl(url) {
+    for (var k in PHOTOS) if (PHOTOS[k] === url) return k;
+    return null;
+  }
+  // Any remote species photo that fails to load falls back to the embedded one.
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    if (!img || img.tagName !== 'IMG') return;
+    var src = img.getAttribute('src') || '';
+    if (!src || src.indexOf('data:') === 0) return;
+    var k = img.getAttribute('data-species-photo') || keyForUrl(src);
+    if (!k || !ORIGINAL[k] || ORIGINAL[k] === src) return;
+    if (PHOTOS[k] === src) PHOTOS[k] = ORIGINAL[k];   // for this visit only; saved choices stay
+    img.src = ORIGINAL[k];
+  }, true);
+
+  window.applyStoredPhotoOverrides = function () { Object.keys(SPECIES).forEach(paint); };
+
+  if (typeof window.applyPickerChoice === 'function') {
+    var origApply = window.applyPickerChoice;
+    window.applyPickerChoice = function (key, photo, div) {
+      store.set('pp:' + key, { url: photo.url, by: photo.by, license: photo.license });
+      PHOTOS[key] = photo.url;
+      if (photo.by) SPECIES[key].by = photo.by;
+      try { origApply(key, photo, div); } catch (e) {}
+      paint(key);
+    };
+  }
+  window.resetPickerPhoto = function () {
+    var k = (typeof pickerKey !== 'undefined') ? pickerKey : null;
+    if (!k) return;
+    store.del('pp:' + k);
+    var r = store.get(refreshedKey(k));
+    PHOTOS[k] = r ? r.url : ORIGINAL[k];
+    if (r && r.by) SPECIES[k].by = r.by;
+    paint(k);
+    if (typeof closePhotoPicker === 'function') closePhotoPicker();
+  };
+
+  window.refreshPhotos = function (btn) {
+    var sel = btn && btn.parentElement && btn.parentElement.querySelector('.photo-sort-select');
+    var sort = sel ? sel.value : 'quality_grade=research&order_by=votes&order=desc';
+    var keys = Object.keys(SPECIES), updated = 0, failed = 0, done = 0;
+    $$('.refresh-photo-btn').forEach(function (b) { b.disabled = true; });
+    setStatus('Fetching photos…');
+    return Promise.all(keys.map(function (k) {
+      return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&' + sort + '&per_page=20&photos=true')
+        .then(function (d) {
+          var res = d.results || [];
+          for (var i = 0; i < res.length; i++) {
+            var ph = (res[i].photos || []).filter(function (p) { return USABLE[p.license_code]; })[0];
+            if (ph) {
+              var url = ph.url.replace(/\/(square|small|thumb|large|original)\./, '/medium.');
+              var by = res[i].user ? res[i].user.login : '';
+              store.set(refreshedKey(k), { url: url, by: by });
+              if (!chosenPhoto(k)) { PHOTOS[k] = url; SPECIES[k].by = by; }
+              updated++; return;
+            }
+          }
+          failed++;
+        }, function () { failed++; })
+        .then(function () { done++; setStatus(done + '/' + keys.length + ' photos checked…'); });
+    })).then(function () {
+      keys.forEach(paint);
+      rerender();
+      $$('.refresh-photo-btn').forEach(function (b) { b.disabled = false; });
+      setStatus(failed === keys.length ? 'Could not reach iNaturalist — showing built-in photos'
+        : (failed ? '⚠ ' + failed + ' without a usable photo · ' : '✓ ') + updated + '/' + keys.length + ' photos updated');
+    });
+  };
+
+  /* ════════════════ AUDIO ════════════════ */
+  if (typeof window.AUDIO === 'undefined' && typeof AUDIO === 'undefined') window.AUDIO = {};
+  var SOUNDS = (typeof AUDIO !== 'undefined') ? AUDIO : window.AUDIO;
+  var soundBy = {};
+  var soundKey = function (k) { return NS + 'sound:' + k; };
+  Object.keys(SPECIES).forEach(function (k) {
+    var s = store.get(soundKey(k));
+    if (s && s.url && !SOUNDS[k]) { SOUNDS[k] = s.url; soundBy[k] = s.by; }
+  });
+  var token = 0, playingKey = null;
+  function player() { return $('#audio-bar audio'); }
+  function bar(show, text) {
+    var b = $('#audio-bar'), l = $('#audio-label');
+    if (b) b.style.display = show ? 'flex' : 'none';
+    if (l && text != null) l.textContent = text;
+  }
+  function findSound(k) {
+    return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&sounds=true&quality_grade=research&order_by=votes&order=desc&per_page=10')
+      .then(function (d) {
+        var res = d.results || [];
+        for (var i = 0; i < res.length; i++) {
+          var snd = (res[i].sounds || []).filter(function (s) { return s.file_url && USABLE[s.license_code]; })[0];
+          if (snd) {
+            var by = res[i].user ? res[i].user.login : '';
+            SOUNDS[k] = snd.file_url; soundBy[k] = by;
+            store.set(soundKey(k), { url: snd.file_url, by: by });
+            markSoundButtons(k);
+            return snd.file_url;
+          }
+        }
+        return null;
+      });
+  }
+  function markSoundButtons(k) {
+    $$('[data-audio-key="' + k + '"] span').forEach(function (s) { s.textContent = SOUND; });
+  }
+  window.stopAudio = function () {
+    token++; playingKey = null;
+    var p = player();
+    if (p) { p.pause(); p.removeAttribute('src'); try { p.load(); } catch (e) {} }
+    bar(false);
+  };
+  window.playCall = function (k) {
+    var t = ++token, p = player();
+    if (!p) return;
+    p.pause();
+    playingKey = k;
+    bar(true, (SOUNDS[k] ? 'Loading ' : 'Searching iNaturalist for ') + nameOf(k) + '…');
+    var get = SOUNDS[k] ? Promise.resolve(SOUNDS[k]) : findSound(k);
+    get.then(function (src) {
+      if (t !== token) return;
+      if (!src) { bar(true, 'No recording on iNaturalist for ' + nameOf(k)); return; }
+      p.src = src;
+      var pr = p.play();
+      bar(true, nameOf(k) + ' · ' + (soundBy[k] ? soundBy[k] + ' (iNaturalist)' : sciOf(k)));
+      if (pr && pr.catch) pr.catch(function (err) {
+        if (t !== token || (err && err.name === 'AbortError')) return;
+        if (err && err.name === 'NotAllowedError') bar(true, 'Press ▶ to play ' + nameOf(k));
+      });
+    }, function () {
+      if (t === token) bar(true, 'Could not reach iNaturalist — sounds need an internet connection');
+    });
+  };
+  window.fetchAndPlayAudio = window.playCall;
+  (function wirePlayer() {
+    var p = player();
+    if (!p) return;
+    p.onended = function () { window.stopAudio(); };
+    p.onerror = function () {
+      if (!p.getAttribute('src') || !playingKey) return;     // cleared on purpose
+      var k = playingKey;
+      delete SOUNDS[k]; store.del(soundKey(k));                // stale link: forget it
+      bar(true, 'That recording is unavailable — tap ' + SOUND + ' to try another');
+    };
+  })();
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.stopAudio(); });
+
+  window.refreshAudio = function (btn) {
+    var keys = Object.keys(SPECIES), found = 0, failed = 0, done = 0;
+    if (btn) btn.disabled = true;
+    setStatus('Fetching sounds…');
+    return Promise.all(keys.map(function (k) {
+      return findSound(k).then(function (u) { if (u) found++; }, function () { failed++; })
+        .then(function () { done++; setStatus(done + '/' + keys.length + ' sounds checked…'); });
+    })).then(function () {
+      if (btn) btn.disabled = false;
+      setStatus(failed === keys.length ? 'Could not reach iNaturalist'
+        : '✓ ' + found + '/' + keys.length + ' species have recordings on iNaturalist');
+    });
+  };
+
+  /* ════════════════ LIVE COUNTS / LIKELIHOODS ════════════════ */
+  var countsKey = NS + 'counts';
+  function fmtDate(t) {
+    var d = new Date(t);
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function noteText(state, t) {
+    var total = Object.keys(OBS).reduce(function (s, k) { return s + (OBS[k] || 0); }, 0);
+    var base = 'Likelihoods use ' + total.toLocaleString() + ' research-grade Louisiana iNaturalist records';
+    if (state === 'busy') return 'Updating likelihoods from iNaturalist…';
+    if (state === 'live') return base + ' · updated ' + fmtDate(t);
+    if (state === 'offline') return base + ' · built-in counts (offline)';
+    return base;
+  }
+  function note(state, t) {
+    $$('.nd-counts-note').forEach(function (n) {
+      n.textContent = noteText(state, t);
+      n.classList.toggle('nd-busy', state === 'busy');
+    });
+  }
+  function applyCounts(counts) {
+    Object.keys(counts).forEach(function (k) { if (k in SPECIES && typeof counts[k] === 'number') OBS[k] = counts[k]; });
+    TOTAL_OBS = Object.keys(OBS).reduce(function (s, k) { return s + (OBS[k] || 0); }, 0);
+    rerender();
+  }
+  function fetchCounts() {
+    var byName = {}, counts = {};
+    function page(n) {
+      return inat('observations/species_counts?place_id=' + PLACE + '&quality_grade=research&taxon_id=' + CFG.ancestor + '&per_page=500&page=' + n)
+        .then(function (d) {
+          (d.results || []).forEach(function (r) { byName[r.taxon.name] = r.count; });
+          if ((d.results || []).length === 500 && n < 6) return page(n + 1);
+        });
+    }
+    return (CFG.ancestor ? page(1) : Promise.resolve()).then(function () {
+      var missing = Object.keys(SPECIES).filter(function (k) {
+        if (sciOf(k) in byName) { counts[k] = byName[sciOf(k)]; return false; }
+        return true;
+      });
+      // Names not matched (taxonomy renames, genus-level entries) are looked up one by one.
+      return Promise.all(missing.map(function (k) {
+        return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&place_id=' + PLACE + '&quality_grade=research&per_page=1')
+          .then(function (d) { if (typeof d.total_results === 'number') counts[k] = d.total_results; }, function () {});
+      }));
+    }).then(function () { return counts; });
+  }
+  // A count of 0 is real data (no research-grade LA records), not a missing value.
+  if (typeof window.rarity === 'function') {
+    var origRarity = window.rarity;
+    window.rarity = function (obs) {
+      if (obs === 0) return { label: 'No LA records yet', cls: 'rc-vrare' };
+      return origRarity.apply(this, arguments);
+    };
+  }
+  var inflight = null;
+  function updateCounts(force) {
+    if (inflight) return inflight;
+    var cached = store.get(countsKey);
+    if (cached && cached.counts) applyCounts(cached.counts);
+    if (!force && cached && Date.now() - cached.t < COUNT_TTL) { note('live', cached.t); return Promise.resolve(); }
+    note('busy');
+    $$('.refresh-inat-btn').forEach(function (b) { b.disabled = true; });
+    inflight = fetchCounts().then(function (counts) {
+      if (!Object.keys(counts).length) throw new Error('no data');
+      var t = Date.now();
+      store.set(countsKey, { t: t, counts: counts });
+      applyCounts(counts);
+      note('live', t);
+      if (force) setStatus('✓ Counts updated from iNaturalist');
+    }).catch(function () {
+      note(cached ? 'live' : 'offline', cached && cached.t);
+      if (force) setStatus('Could not reach iNaturalist — using saved counts');
+    }).then(function () {
+      inflight = null;
+      $$('.refresh-inat-btn').forEach(function (b) { b.disabled = false; });
+    });
+    return inflight;
+  }
+  window.refreshInatData = function () { return updateCounts(true); };
+
+  /* ════════════════ RE-RENDER WHATEVER IS ON SCREEN ════════════════ */
+  var lastResult = null;
+  if (typeof window.showResult === 'function') {
+    var origShow = window.showResult;
+    window.showResult = function (k) { lastResult = k; return origShow.apply(this, arguments); };
+  }
+  function visible(id) { var el = document.getElementById(id); return el && el.style.display !== 'none'; }
+  function rerender() {
+    var grid = $('#gallery-grid');
+    if (grid && grid.children.length && typeof buildGallery === 'function') {
+      try {
+        galleryBuilt = false; grid.innerHTML = ''; buildGallery();
+        var active = $('.filter-btn.active');
+        if (active) active.click();
+      } catch (e) {}
+    }
+    try {
+      if (visible('key-step') && typeof currentNode !== 'undefined' && currentNode && typeof renderStep === 'function') renderStep(currentNode);
+      else if (visible('key-result') && lastResult && typeof buildResultHTML === 'function')
+        $('#key-result').innerHTML = buildResultHTML(lastResult, true);
+    } catch (e) {}
+  }
+
+  /* ════════════════ SAME CONTROLS IN EVERY GUIDE ════════════════ */
+  var PLAY_SVG = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  if (typeof window.buildResultHTML === 'function') {
+    var origResult = window.buildResultHTML;
+    window.buildResultHTML = function (k) {
+      var html = origResult.apply(this, arguments);
+      if (html.indexOf('photo-pick-btn') < 0 && $('#photo-picker'))
+        html = html.replace('<div class="result-photo-wrap">', '<div class="result-photo-wrap"><button class="photo-pick-btn" onclick="openPhotoPicker(\'' + k + '\', event)">&#x270F; Choose Photo</button>');
+      if (html.indexOf('play-call-btn') < 0)
+        html = html.replace('<div class="result-actions">', '<div class="result-actions"><button class="play-call-btn" onclick="playCall(\'' + k + '\')">' + PLAY_SVG + SOUND + '</button>');
+      return html;
+    };
+  }
+  if (typeof window.buildGallery === 'function') {
+    var origGallery = window.buildGallery;
+    window.buildGallery = function () {
+      var r = origGallery.apply(this, arguments);
+      $$('#gallery-grid .sp-card').forEach(function (card) {
+        if ($('.sp-audio-btn', card)) return;
+        var m = /openModal\('([^']+)'\)/.exec(card.getAttribute('onclick') || '');
+        var body = $('.sp-body', card) || card;
+        if (!m) return;
+        var b = document.createElement('button');
+        b.className = 'sp-audio-btn';
+        b.setAttribute('data-audio-key', m[1]);
+        b.innerHTML = PLAY_SVG + '<span>' + SOUND + '</span>';
+        b.addEventListener('click', function (e) { e.stopPropagation(); window.playCall(m[1]); });
+        body.appendChild(b);
+      });
+      return r;
+    };
+  }
+
+  /* ════════════════ START ════════════════ */
+  window.applyStoredPhotoOverrides();
+  updateCounts(false);
+})();
+</script>
+<script>
+/* Site navigation behaviour: mobile toggle, one dropdown open at a time. */
+(function () {
+  var nav = document.querySelector('.nd-nav');
+  if (!nav) return;
+  var toggle = nav.querySelector('.nd-toggle');
+  var drops = nav.querySelectorAll('.nd-drop');
+  if (toggle) toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('nd-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  drops.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (d.open) drops.forEach(function (o) { if (o !== d) o.open = false; });
+    });
+  });
+  function closeAll() {
+    drops.forEach(function (d) { d.open = false; });
+    nav.classList.remove('nd-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+  document.addEventListener('click', function (e) { if (!nav.contains(e.target)) closeAll(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+})();
+</script><!--nd:end script-->
+</body>
+</html>

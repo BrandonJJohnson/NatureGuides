@@ -1,0 +1,22 @@
+/* Shared field-guide features (sound player, photo picker button, live-count note).
+   Uses each guide's own palette variables so it matches the guide's theme. */
+.home-link{display:none!important}
+.result-photo-wrap{position:relative}
+.play-call-btn{font-family:var(--f-ui);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;background:var(--safe);color:#fff;border:none;padding:.55rem 1.25rem;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:background .12s}
+.play-call-btn:hover{background:#2d5225}
+.play-call-btn svg{width:12px;height:12px;fill:currentColor}
+.sp-audio-btn{display:flex;align-items:center;gap:.3rem;margin-top:.55rem;padding:.3rem .6rem;background:rgba(58,104,48,.1);border:1px solid rgba(58,104,48,.28);color:var(--safe);font-family:var(--f-ui);font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;width:100%;transition:background .12s}
+.sp-audio-btn:hover{background:rgba(58,104,48,.2)}
+.sp-audio-btn svg{width:10px;height:10px;fill:currentColor;flex-shrink:0}
+#audio-bar{position:fixed;bottom:0;left:0;right:0;background:var(--swamp);color:var(--text-pale);padding:.5rem 1rem;z-index:200;display:none;align-items:center;gap:.7rem;border-top:2px solid var(--gold)}
+#audio-bar audio{flex:1;min-width:0;height:32px}
+#audio-label{font-family:var(--f-ui);font-size:.68rem;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;color:var(--muted)}
+#audio-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:0 .3rem;line-height:1;flex-shrink:0}
+#audio-close:hover{color:var(--text-pale)}
+.photo-pick-btn{position:absolute;bottom:.35rem;left:.35rem;background:rgba(13,26,11,.72);color:var(--text-pale);border:1px solid rgba(190,168,124,.4);font-family:var(--f-ui);font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;padding:.22em .55em;border-radius:2px;cursor:pointer;z-index:5;opacity:0;transition:opacity .15s}
+.result-photo-wrap:hover .photo-pick-btn,.photo-pick-btn:focus{opacity:1}
+@media (hover:none){.photo-pick-btn{opacity:1}}
+.nd-counts-note{font-family:var(--f-ui);font-size:.66rem;letter-spacing:.05em;color:var(--muted);text-align:center;margin-top:.6rem}
+.nd-counts-note.nd-busy::before{content:'';display:inline-block;width:.7em;height:.7em;margin-right:.45em;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-.1em;animation:nd-spin .8s linear infinite}
+@keyframes nd-spin{to{transform:rotate(360deg)}}
+@media print{#audio-bar,.photo-pick-btn,.nd-counts-note{display:none!important}}

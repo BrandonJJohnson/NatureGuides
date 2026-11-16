@@ -1,0 +1,133 @@
+{
+  "brand": "Louisiana Field Guides",
+  "home": "index.html",
+  "sections": [
+    {
+      "label": "Amphibians & Reptiles",
+      "items": [
+        {
+          "label": "Frogs & Toads",
+          "href": "LouisianaFrogIdentificationKey.html",
+          "ancestor": 20979,
+          "sound": "Play Call"
+        },
+        {
+          "label": "Salamanders",
+          "href": "LouisianaSalamandersIdentificationKey.html",
+          "ancestor": 26718,
+          "sound": "Play Sound"
+        },
+        {
+          "label": "Lizards & Skinks",
+          "href": "LouisianaLizardsIdentificationKey.html",
+          "ancestor": 26172,
+          "sound": "Play Sound"
+        },
+        {
+          "label": "Snakes",
+          "href": "LouisianaSnakeIdentificationKey.html",
+          "ancestor": 26172,
+          "sound": "Play Sound"
+        },
+        {
+          "label": "Turtles",
+          "href": "LouisianaTurtleIdentificationKey.html",
+          "ancestor": 39532,
+          "sound": "Play Sound"
+        }
+      ]
+    },
+    {
+      "label": "Birds",
+      "items": [
+        {
+          "label": "Passerines (Songbirds)",
+          "href": "LouisianaPasserinesIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call"
+        },
+        {
+          "label": "Raptors",
+          "href": "LouisianaRaptorsIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call"
+        },
+        {
+          "label": "Waterfowl",
+          "href": "LouisianaWaterfowlIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call"
+        },
+        {
+          "label": "Shorebirds & Waders",
+          "href": "LouisianaShorebirdsWadersIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call"
+        },
+        {
+          "label": "Seabirds",
+          "href": "LouisianaSeabirdsIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call"
+        },
+        {
+          "label": "Game Birds",
+          "href": "LouisianaGameBirdsIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call"
+        },
+        {
+          "label": "All Birds (combined)",
+          "href": "LouisianaBirdIdentificationKey.html",
+          "ancestor": 3,
+          "sound": "Play Call",
+          "hidden": true
+        }
+      ]
+    },
+    {
+      "label": "Mammals",
+      "items": [
+        {
+          "label": "Mammals",
+          "href": "LouisianaMammalIdentificationKey.html",
+          "ancestor": 40151,
+          "sound": "Play Sound"
+        }
+      ]
+    },
+    {
+      "label": "Insects",
+      "items": [
+        {
+          "label": "Butterflies",
+          "href": "LouisianaButterflyIdentificationKey.html",
+          "ancestor": 47224,
+          "sound": "Play Sound"
+        },
+        {
+          "label": "Underwing Moths",
+          "href": "LouisianaUnderwingMothIdentificationKey.html",
+          "ancestor": 83842,
+          "sound": "Play Sound"
+        },
+        {
+          "label": "Velvet Ants",
+          "href": "LouisianaVelvetAntIdentificationKey.html",
+          "ancestor": 48511,
+          "sound": "Play Sound"
+        }
+      ]
+    },
+    {
+      "label": "iNaturalist Reports",
+      "items": [
+        {
+          "label": "iNaturalist Highlights",
+          "href": "iNaturalistHighlights.html",
+          "desc": "Lifers, firsts and notable finds by user or place"
+        }
+      ]
+    }
+  ]
+}

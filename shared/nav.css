@@ -1,0 +1,35 @@
+/* Site navigation — identical on every page. Self-contained colors/fonts so it
+   looks the same on the field guides, the homepage and the iNaturalist reports. */
+.nd-nav{--nd-bg:#0D1A0B;--nd-bg2:#162914;--nd-text:#D8CCAA;--nd-muted:#8A9E80;--nd-gold:#9A7C24;--nd-line:#2a3d26;
+  background:var(--nd-bg);border-bottom:1px solid #000;position:sticky;top:0;z-index:400;
+  font-family:'Trebuchet MS','Arial Narrow',Arial,sans-serif;font-size:14px;line-height:1.4;color:var(--nd-text);
+  color-scheme:dark}
+.nd-nav *,.nd-nav *::before,.nd-nav *::after{box-sizing:border-box;margin:0;padding:0}
+.nd-nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:1rem;min-height:44px}
+.nd-brand{font-family:'Palatino Linotype','Palatino','Book Antiqua',Georgia,serif;font-size:1rem;color:var(--nd-text);text-decoration:none;white-space:nowrap;letter-spacing:.01em}
+.nd-brand:hover{color:#fff}
+.nd-toggle{display:none;margin-left:auto;background:none;border:1px solid var(--nd-line);color:var(--nd-text);font:inherit;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px;cursor:pointer}
+.nd-menu{list-style:none;display:flex;align-items:stretch;gap:.15rem;margin-left:auto}
+.nd-menu>li{position:relative;display:flex}
+.nd-menu>li>a,.nd-drop>summary{display:flex;align-items:center;gap:.35em;padding:.75rem .7rem;color:var(--nd-muted);text-decoration:none;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;list-style:none;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}
+.nd-drop>summary::-webkit-details-marker{display:none}
+.nd-drop>summary::after{content:'';width:.4em;height:.4em;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-.15em) rotate(45deg);opacity:.7}
+.nd-menu>li>a:hover,.nd-drop>summary:hover,.nd-drop[open]>summary{color:var(--nd-text)}
+.nd-menu>li>a.nd-current,.nd-drop.nd-current>summary{color:var(--nd-text);border-bottom-color:var(--nd-gold)}
+.nd-panel{position:absolute;top:100%;right:0;min-width:230px;background:var(--nd-bg2);border:1px solid #000;border-top:2px solid var(--nd-gold);box-shadow:0 10px 30px rgba(0,0,0,.45);padding:.35rem 0;z-index:401}
+.nd-panel a{display:block;padding:.5rem 1rem;color:var(--nd-text);text-decoration:none;font-size:.85rem;letter-spacing:.02em}
+.nd-panel a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nd-panel a.nd-current{color:#fff;box-shadow:inset 3px 0 0 var(--nd-gold)}
+.nd-panel small{display:block;color:var(--nd-muted);font-size:.72rem;letter-spacing:0;margin-top:.1rem}
+.nd-inat>summary{color:#9fd39a}
+@media (max-width:760px){
+  .nd-toggle{display:block}
+  .nd-menu{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;background:var(--nd-bg2);border-bottom:2px solid var(--nd-gold);padding:.25rem 0;margin:0;max-height:calc(100vh - 44px);overflow-y:auto}
+  .nd-nav.nd-open .nd-menu{display:flex}
+  .nd-menu>li{display:block}
+  .nd-menu>li>a,.nd-drop>summary{padding:.7rem 1.5rem;border-bottom:none}
+  .nd-drop>summary{justify-content:space-between}
+  .nd-panel{position:static;box-shadow:none;border:none;background:transparent;padding:0 0 .4rem}
+  .nd-panel a{padding:.45rem 2.25rem}
+}
+@media print{.nd-nav{display:none!important}}

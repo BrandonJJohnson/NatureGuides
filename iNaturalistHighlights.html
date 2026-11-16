@@ -1,0 +1,3716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iNaturalist Highlights</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f4;
+    --panel: #ffffff;
+    --border: #dfe3da;
+    --text: #1d2418;
+    --muted: #5b6355;
+    --accent: #1c7c4c;
+    --accent-2: #2e8b57;
+    --warn: #b5651d;
+    --danger: #a3342e;
+    --badge-bg: #eef3ea;
+    --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14170f;
+      --panel: #1c2117;
+      --border: #2c3327;
+      --text: #e8ede2;
+      --muted: #9aa693;
+      --accent: #4fd18a;
+      --accent-2: #59b37c;
+      --warn: #e0a458;
+      --danger: #e0625d;
+      --badge-bg: #232b1e;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 10px rgba(0,0,0,0.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 28px 24px 12px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+  }
+  header p.sub {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+  .search-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  input[type="text"], input[type="number"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 0.95rem;
+  }
+  input[type="text"]#username, input[type="text"]#placeQuery {
+    flex: 1 1 220px;
+    min-width: 180px;
+  }
+  .autocomplete-wrap {
+    position: relative;
+  }
+  .autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    width: min(420px, 100%);
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    z-index: 10;
+  }
+  .autocomplete-item {
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .autocomplete-item:hover, .autocomplete-item.active {
+    background: var(--badge-bg);
+  }
+  .autocomplete-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ac-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+    background: var(--badge-bg);
+  }
+  .ac-text { min-width: 0; flex: 1; }
+  .ac-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-sub { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .autocomplete-heading {
+    padding: 8px 12px 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .report-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .report-label {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+  .export-chooser {
+    margin-top: 12px;
+    font-size: 0.88rem;
+  }
+  .export-chooser summary {
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .export-choice-actions {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .export-choice-actions button {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+  .export-group {
+    margin-bottom: 8px;
+  }
+  .export-group-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .export-choice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+    overflow-wrap: anywhere;
+  }
+  .backup-title {
+    margin-right: 4px;
+    font-size: 0.95rem;
+  }
+  .mode-tabs {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  a.secondary {
+    display: inline-block;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .status-line {
+    margin-top: 10px;
+    font-size: 0.88rem;
+    color: var(--muted);
+    min-height: 1.2em;
+  }
+  .progress-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+    display: none;
+  }
+  .progress-track.active { display: block; }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent-2);
+    transition: width 0.2s ease;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+  }
+  .stat-card {
+    background: var(--badge-bg);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: left;
+  }
+  .stat-card .num {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-card .label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .tab-btn, .mode-btn, .place-tab-btn {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  .tab-btn.active, .mode-btn.active, .place-tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .filter-row {
+    margin-bottom: 14px;
+  }
+  .filter-row input {
+    width: 100%;
+  }
+  .list-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .notable-link-row {
+    margin-bottom: 12px;
+  }
+  .list-controls label {
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+  }
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .page-summary {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .page-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .page-nav button {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+  .page-info {
+    font-size: 0.85rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .obs-card {
+    display: flex;
+    gap: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    text-decoration: none;
+    color: inherit;
+    align-items: center;
+  }
+  .obs-card:hover { border-color: var(--accent); }
+  .obs-thumb {
+    width: 58px;
+    height: 58px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .obs-info { flex: 1; min-width: 0; }
+  .obs-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .obs-sci {
+    font-style: italic;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .obs-meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .badge-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--badge-bg);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .badge.warn { color: var(--warn); }
+  .badge.danger { color: var(--danger); }
+  .badge.confirmed { color: var(--accent-2); background: rgba(46,139,87,0.18); }
+  .badge.not-first { color: var(--muted); }
+  .badge.pending { color: var(--muted); font-weight: 600; }
+  .badge.error { color: var(--danger); }
+  .empty-msg {
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 20px 0;
+    text-align: center;
+  }
+  footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 10px 24px 40px;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  a { color: var(--accent); }
+</style>
+
+<!--nd:begin head--><style>
+/* Site navigation — identical on every page. Self-contained colors/fonts so it
+   looks the same on the field guides, the homepage and the iNaturalist reports. */
+.nd-nav{--nd-bg:#0D1A0B;--nd-bg2:#162914;--nd-text:#D8CCAA;--nd-muted:#8A9E80;--nd-gold:#9A7C24;--nd-line:#2a3d26;
+  background:var(--nd-bg);border-bottom:1px solid #000;position:sticky;top:0;z-index:400;
+  font-family:'Trebuchet MS','Arial Narrow',Arial,sans-serif;font-size:14px;line-height:1.4;color:var(--nd-text);
+  color-scheme:dark}
+.nd-nav *,.nd-nav *::before,.nd-nav *::after{box-sizing:border-box;margin:0;padding:0}
+.nd-nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:1rem;min-height:44px}
+.nd-brand{font-family:'Palatino Linotype','Palatino','Book Antiqua',Georgia,serif;font-size:1rem;color:var(--nd-text);text-decoration:none;white-space:nowrap;letter-spacing:.01em}
+.nd-brand:hover{color:#fff}
+.nd-toggle{display:none;margin-left:auto;background:none;border:1px solid var(--nd-line);color:var(--nd-text);font:inherit;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px;cursor:pointer}
+.nd-menu{list-style:none;display:flex;align-items:stretch;gap:.15rem;margin-left:auto}
+.nd-menu>li{position:relative;display:flex}
+.nd-menu>li>a,.nd-drop>summary{display:flex;align-items:center;gap:.35em;padding:.75rem .7rem;color:var(--nd-muted);text-decoration:none;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;list-style:none;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}
+.nd-drop>summary::-webkit-details-marker{display:none}
+.nd-drop>summary::after{content:'';width:.4em;height:.4em;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-.15em) rotate(45deg);opacity:.7}
+.nd-menu>li>a:hover,.nd-drop>summary:hover,.nd-drop[open]>summary{color:var(--nd-text)}
+.nd-menu>li>a.nd-current,.nd-drop.nd-current>summary{color:var(--nd-text);border-bottom-color:var(--nd-gold)}
+.nd-panel{position:absolute;top:100%;right:0;min-width:230px;background:var(--nd-bg2);border:1px solid #000;border-top:2px solid var(--nd-gold);box-shadow:0 10px 30px rgba(0,0,0,.45);padding:.35rem 0;z-index:401}
+.nd-panel a{display:block;padding:.5rem 1rem;color:var(--nd-text);text-decoration:none;font-size:.85rem;letter-spacing:.02em}
+.nd-panel a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nd-panel a.nd-current{color:#fff;box-shadow:inset 3px 0 0 var(--nd-gold)}
+.nd-panel small{display:block;color:var(--nd-muted);font-size:.72rem;letter-spacing:0;margin-top:.1rem}
+.nd-inat>summary{color:#9fd39a}
+@media (max-width:760px){
+  .nd-toggle{display:block}
+  .nd-menu{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;background:var(--nd-bg2);border-bottom:2px solid var(--nd-gold);padding:.25rem 0;margin:0;max-height:calc(100vh - 44px);overflow-y:auto}
+  .nd-nav.nd-open .nd-menu{display:flex}
+  .nd-menu>li{display:block}
+  .nd-menu>li>a,.nd-drop>summary{padding:.7rem 1.5rem;border-bottom:none}
+  .nd-drop>summary{justify-content:space-between}
+  .nd-panel{position:static;box-shadow:none;border:none;background:transparent;padding:0 0 .4rem}
+  .nd-panel a{padding:.45rem 2.25rem}
+}
+@media print{.nd-nav{display:none!important}}
+</style><!--nd:end head--></head>
+<body>
+<!--nd:begin nav--><nav class="nd-nav" aria-label="Field guides"><div class="nd-nav-inner"><a class="nd-brand" href="index.html">Louisiana Field Guides</a><button class="nd-toggle" type="button" aria-expanded="false" aria-controls="nd-menu">Menu</button><ul class="nd-menu" id="nd-menu"><li><a href="index.html">Home</a></li><li><details class="nd-drop"><summary>Amphibians &amp; Reptiles</summary><div class="nd-panel"><a href="LouisianaFrogIdentificationKey.html">Frogs &amp; Toads</a><a href="LouisianaSalamandersIdentificationKey.html">Salamanders</a><a href="LouisianaLizardsIdentificationKey.html">Lizards &amp; Skinks</a><a href="LouisianaSnakeIdentificationKey.html">Snakes</a><a href="LouisianaTurtleIdentificationKey.html">Turtles</a></div></details></li><li><details class="nd-drop"><summary>Birds</summary><div class="nd-panel"><a href="LouisianaPasserinesIdentificationKey.html">Passerines (Songbirds)</a><a href="LouisianaRaptorsIdentificationKey.html">Raptors</a><a href="LouisianaWaterfowlIdentificationKey.html">Waterfowl</a><a href="LouisianaShorebirdsWadersIdentificationKey.html">Shorebirds &amp; Waders</a><a href="LouisianaSeabirdsIdentificationKey.html">Seabirds</a><a href="LouisianaGameBirdsIdentificationKey.html">Game Birds</a></div></details></li><li><a href="LouisianaMammalIdentificationKey.html">Mammals</a></li><li><details class="nd-drop"><summary>Insects</summary><div class="nd-panel"><a href="LouisianaButterflyIdentificationKey.html">Butterflies</a><a href="LouisianaUnderwingMothIdentificationKey.html">Underwing Moths</a><a href="LouisianaVelvetAntIdentificationKey.html">Velvet Ants</a></div></details></li><li><details class="nd-drop nd-inat nd-current"><summary>iNaturalist Reports</summary><div class="nd-panel"><a href="iNaturalistHighlights.html" class="nd-current" aria-current="page">iNaturalist Highlights<small>Lifers, firsts and notable finds by user or place</small></a></div></details></li></ul></div></nav><!--nd:end nav-->
+
+<header>
+  <h1>iNaturalist Highlights</h1>
+  <p class="sub">Search by user to surface lifers and county (parish), state, country and world firsts, or search by place to see its species list, notable finds, and who found each species first — all checked against every observer's records, not just one person's history.</p>
+</header>
+
+<main>
+  <div class="panel">
+    <div class="tabs mode-tabs">
+      <button class="mode-btn active" data-mode="user">Search by User</button>
+      <button class="mode-btn" data-mode="place">Search by Place</button>
+    </div>
+  </div>
+
+  <div id="userSearchPanel">
+    <div class="panel">
+      <div class="search-row autocomplete-wrap">
+        <input type="text" id="username" placeholder="iNaturalist username (e.g. kueda)" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="userSuggestions" aria-expanded="false">
+        <button id="loadBtn">Load</button>
+        <button id="stopBtn" class="secondary" disabled>Stop</button>
+        <button id="refreshBtn" class="secondary" title="Only fetch observations added or edited since the last sync">Refresh</button>
+        <button id="fullResyncBtn" class="secondary" title="Clear cached data for this user and redownload everything from scratch">Full Resync</button>
+        <div class="autocomplete-list" id="userSuggestions" role="listbox" style="display:none;"></div>
+      </div>
+      <div class="progress-track" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="status-line" id="statusLine"></div>
+    </div>
+
+    <div id="results" style="display:none;">
+      <div class="panel">
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="status-line" id="verifyStatusLine"></div>
+        <div class="report-row">
+          <span class="report-label">Report</span>
+          <button class="secondary" data-report="user" data-format="html" title="A standalone page with this user's firsts, notable finds, new species and life list. Open it in any browser or print it to PDF.">Download report</button>
+          <button class="secondary" data-report="user" data-format="pdf" title="Opens the print dialog with the full report laid out for paper; choose &quot;Save as PDF&quot;">Save as PDF</button>
+          <button class="secondary" data-report="user" data-format="csv" title="The same data as a spreadsheet (opens in Excel, Google Sheets, Numbers)">Download spreadsheet (CSV)</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="lifers">New Species</button>
+          <button class="tab-btn" data-tab="country">Country Firsts</button>
+          <button class="tab-btn" data-tab="state">State Firsts</button>
+          <button class="tab-btn" data-tab="county">County / Parish Firsts</button>
+          <button class="tab-btn" data-tab="world">World Firsts</button>
+          <button class="tab-btn" data-tab="notable">Notable Finds</button>
+        </div>
+
+        <div class="filter-row">
+          <input type="text" id="filterInput" placeholder="Filter by species name...">
+        </div>
+
+        <div class="tab-panel active" id="tab-lifers"></div>
+        <div class="tab-panel" id="tab-country"></div>
+        <div class="tab-panel" id="tab-state"></div>
+        <div class="tab-panel" id="tab-county"></div>
+        <div class="tab-panel" id="tab-world"></div>
+        <div class="tab-panel" id="tab-notable"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="placeSearchPanel" style="display:none;">
+    <div class="panel">
+      <div class="search-row autocomplete-wrap">
+        <input type="text" id="placeQuery" placeholder="Place name (e.g. Louisiana, East Baton Rouge Parish)" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="placeSuggestions" aria-expanded="false">
+        <button id="placeLoadBtn" disabled>Load</button>
+        <button id="placeStopBtn" class="secondary" disabled>Stop</button>
+        <button id="placeRefreshBtn" class="secondary" disabled title="Re-fetch this place's species list (keeps cached &quot;first found&quot; lookups)">Refresh</button>
+        <button id="placeFullResyncBtn" class="secondary" disabled title="Clear all cached data for this place and start over">Full Resync</button>
+        <div class="autocomplete-list" id="placeSuggestions" role="listbox" style="display:none;"></div>
+      </div>
+      <div class="progress-track" id="placeProgressTrack"><div class="progress-fill" id="placeProgressFill"></div></div>
+      <div class="status-line" id="placeStatusLine"></div>
+    </div>
+
+    <div id="placeResults" style="display:none;">
+      <div class="panel">
+        <div class="stat-grid" id="placeStatGrid"></div>
+        <div class="report-row">
+          <span class="report-label">Report</span>
+          <button class="secondary" data-report="place" data-format="html" title="A standalone page with this place's notable species, first finders and full species list. Open it in any browser or print it to PDF.">Download report</button>
+          <button class="secondary" data-report="place" data-format="pdf" title="Opens the print dialog with the full report laid out for paper; choose &quot;Save as PDF&quot;">Save as PDF</button>
+          <button class="secondary" data-report="place" data-format="csv" title="The same data as a spreadsheet (opens in Excel, Google Sheets, Numbers)">Download spreadsheet (CSV)</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="tabs">
+          <button class="place-tab-btn active" data-place-tab="species">Species List</button>
+          <button class="place-tab-btn" data-place-tab="notable">Notable Finds</button>
+          <button class="place-tab-btn" data-place-tab="records">Species Records (First Found)</button>
+        </div>
+
+        <div class="filter-row">
+          <input type="text" id="placeFilterInput" placeholder="Filter by species name...">
+        </div>
+
+        <div class="tab-panel active" id="tab-place-species"></div>
+        <div class="tab-panel" id="tab-place-notable"></div>
+        <div class="tab-panel" id="tab-place-records"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="backupPanel">
+    <div class="search-row">
+      <strong class="backup-title">Backup data file</strong>
+      <button id="exportBtn" class="secondary" title="Download everything cached in this browser as a JSON file">Export to file</button>
+      <button id="importBtn" class="secondary" title="Load a previously exported backup file into this browser's cache (merges with what's already here)">Import from file</button>
+      <button id="linkFileBtn" class="secondary" title="Pick a file that is rewritten automatically whenever the cache changes">Link auto-save file…</button>
+      <button id="resumeAutoSaveBtn" class="secondary" style="display:none;">Resume auto-save</button>
+      <button id="unlinkFileBtn" class="secondary" style="display:none;">Unlink</button>
+      <input type="file" id="importFileInput" accept=".zip,.json,.gz,application/zip,application/json,application/gzip" hidden>
+    </div>
+    <details id="exportChooser" class="export-chooser">
+      <summary>Choose what to export (users and places)</summary>
+      <div id="exportChoices"></div>
+    </details>
+    <div class="status-line" id="linkedFileInfo"></div>
+    <div class="status-line" id="backupStatusLine"></div>
+  </div>
+</main>
+
+<footer>
+  Data from the public <a href="https://www.inaturalist.org/pages/api+reference" target="_blank" rel="noopener">iNaturalist API</a>.
+  Each of the user's sightings that could be a county, state, country or world first is automatically checked against all of
+  iNaturalist's data for that place (not just this user's history), and the Firsts tabs list only the ones confirmed
+  as the earliest record of that species in that place by anyone. Checks run quietly in the
+  background after load, throttled to be polite to the API, and results are cached permanently in this browser's
+  IndexedDB so they never need to be re-checked. Observations are cached the same way, so reloading the same user is
+  instant. "Refresh" only downloads observations added or edited since the last sync (a diff, not a full redownload);
+  use "Full Resync" if you want to clear the cache and start over (e.g. to pick up observations deleted upstream).
+  Searching by place works the same way: its species list is cached locally, and "who found it first" per species is
+  looked up lazily (only for whichever page of the Species Records tab you're viewing) and cached permanently, so a
+  species is never looked up twice. "Refresh" re-fetches the species list but keeps those cached first-found lookups;
+  "Full Resync" clears everything for that place.
+  "Download report" saves what's loaded for a user or place as a standalone page you can share or print to PDF, and
+  "Download spreadsheet" saves the same rows as a CSV.
+  Because browser storage can be wiped, "Export to file" saves the cache as a compact .zip backup file (all of
+  it, or just the users and places you pick) and "Import from file" loads one back, merging with whatever is already
+  cached; older .json and .json.gz backups still import. In Chrome/Edge you can also link an auto-save file that is
+  rewritten with the full cache about 15 seconds after it changes.
+</footer>
+
+<script>
+(() => {
+  const API_BASE = 'https://api.inaturalist.org/v1';
+  const MIN_INTERVAL_MS = 1100;
+  const PAGE_SIZE = 200;
+  const DEFAULT_PAGE_SIZE = 25;
+  const DB_NAME = 'inat_highlights';
+  const DB_VERSION = 4;
+
+  let lastRequestAt = 0;
+  let currentGeneration = 0; // bumped on every new user-mode load/stop so stale async loops abandon themselves
+  let currentPlaceGeneration = 0; // same idea, but for place-mode loads — independent so the two modes don't cancel each other
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const userGenCheck = (myGen) => () => myGen !== currentGeneration;
+  const placeGenCheck = (myGen) => () => myGen !== currentPlaceGeneration;
+
+  // isCancelled is a zero-arg predicate (not a raw generation number) so this one throttle queue
+  // — and its single lastRequestAt clock — can serve both user-mode and place-mode loops, which
+  // track cancellation against two independent generation counters.
+  // Requests take turns through a single promise chain, so several background jobs running at once
+  // (first-record checks, species lookups, place records) still never exceed one request per interval.
+  let throttleChain = Promise.resolve();
+  let rateLimitedUntil = 0; // when the current rate-limit backoff ends, so progress lines can say why they're stalled
+  function waitForRequestSlot() {
+    const slot = throttleChain.then(async () => {
+      const wait = Math.max(0, lastRequestAt + MIN_INTERVAL_MS - Date.now());
+      if (wait > 0) await sleep(wait);
+      lastRequestAt = Date.now();
+    });
+    throttleChain = slot.catch(() => {});
+    return slot;
+  }
+
+  async function throttledFetch(url, isCancelled) {
+    if (isCancelled()) throw new Error('Cancelled');
+    await waitForRequestSlot();
+    let attempt = 0;
+    while (true) {
+      if (isCancelled()) throw new Error('Cancelled');
+      // iNaturalist's 429 replies carry no CORS headers, so the browser reports a rate limit as a
+      // network error ("Failed to fetch") rather than a 429 — treat both the same way.
+      let res = null;
+      try { res = await fetch(url); } catch (networkErr) { res = null; }
+      if (!res || res.status === 429 || res.status === 503) {
+        attempt++;
+        if (attempt > 5) throw new Error(res ? 'iNaturalist API is rate-limiting us. Try again shortly.' : 'Could not reach iNaturalist (network error or rate limit).');
+        const backoff = 3000 * attempt;
+        // Push the shared clock forward so every background job backs off together, instead of
+        // the others continuing to hit the API while this one waits.
+        lastRequestAt = Math.max(lastRequestAt, Date.now() + backoff);
+        rateLimitedUntil = Math.max(rateLimitedUntil, Date.now() + backoff);
+        await sleep(backoff);
+        if (isCancelled()) throw new Error('Cancelled');
+        await waitForRequestSlot();
+        continue;
+      }
+      if (!res.ok) {
+        if (res.status === 404) throw new Error('Not found.');
+        throw new Error(`API error ${res.status}`);
+      }
+      return res.json();
+    }
+  }
+
+  // ---------- IndexedDB persistence ----------
+
+  let dbBlockedMessage = '';
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { resolve(null); return; }
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        // v1 stored one giant blob per user, which blew past IndexedDB's structured-clone
+        // limits for large accounts ("Data cannot be cloned, out of memory"). v2 stores one
+        // small trimmed record per observation instead, indexed by username.
+        // Only rebuild it when coming from v1 — later upgrades must leave cached observations alone.
+        if (e.oldVersion < 2) {
+          if (db.objectStoreNames.contains('observations')) db.deleteObjectStore('observations');
+          const obsStore = db.createObjectStore('observations', { keyPath: 'id' });
+          obsStore.createIndex('username', 'username', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('places')) db.createObjectStore('places', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('verifications')) db.createObjectStore('verifications', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('user_meta')) db.createObjectStore('user_meta', { keyPath: 'username' });
+        // v3 adds place-search mode: species observed anywhere within a chosen place, and a
+        // lazily-populated "who found it first" fact per species (both cached permanently,
+        // same rationale as the observations/verifications stores above).
+        if (!db.objectStoreNames.contains('place_species')) {
+          const sp = db.createObjectStore('place_species', { keyPath: 'key' });
+          sp.createIndex('placeId', 'placeId', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('place_records')) {
+          const rec = db.createObjectStore('place_records', { keyPath: 'key' });
+          rec.createIndex('placeId', 'placeId', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('place_search_meta')) db.createObjectStore('place_search_meta', { keyPath: 'placeId' });
+        // v4: per-species worldwide facts (total iNaturalist observation count, global IUCN status)
+        // used to flag rare and globally endangered species in Notable Finds.
+        if (!db.objectStoreNames.contains('taxa')) db.createObjectStore('taxa', { keyPath: 'id' });
+      };
+      // An older copy of this page open in another tab holds the old schema open and blocks the
+      // upgrade until it closes — without this the page would just sit there silently.
+      // The 'blocked' event doesn't always fire (e.g. when an earlier request is still queued),
+      // so also show the message if opening takes more than a few seconds.
+      let settled = false;
+      const showBlocked = () => {
+        if (settled || dbBlockedMessage) return;
+        dbBlockedMessage = 'Waiting to open your saved data — another tab with an older copy of this page is probably still open. Close or reload the other iNaturalist Highlights tabs and this will continue automatically.';
+        for (const id of ['statusLine', 'placeStatusLine', 'backupStatusLine']) {
+          const line = document.getElementById(id);
+          if (line) line.textContent = dbBlockedMessage;
+        }
+      };
+      req.onblocked = showBlocked;
+      setTimeout(showBlocked, 3000);
+      req.onsuccess = () => {
+        settled = true;
+        req.result.onversionchange = () => req.result.close(); // let a newer copy of the page upgrade the schema
+        if (dbBlockedMessage) {
+          for (const id of ['statusLine', 'placeStatusLine', 'backupStatusLine']) {
+            const line = document.getElementById(id);
+            if (line && line.textContent === dbBlockedMessage) line.textContent = '';
+          }
+          dbBlockedMessage = '';
+        }
+        resolve(req.result);
+      };
+      req.onerror = () => { settled = true; resolve(null); };
+    });
+  }
+
+  const dbPromise = openDB();
+
+  // Ask the browser not to evict our data under storage pressure (best effort; ignored if unsupported).
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+
+  // Every readwrite transaction goes through here so a linked backup file can be kept in sync
+  // automatically after any change to the cache.
+  function writeTx(db, storeName) {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.addEventListener('complete', () => scheduleAutoSave());
+    return tx;
+  }
+
+  // ---------- Backup data file (export / import / auto-save) ----------
+  //
+  // The IndexedDB cache can be wiped (cleared site data, browser reset, a new machine), so the
+  // whole cache can be written to a plain JSON file and loaded back in. In browsers that support
+  // the File System Access API (Chrome/Edge), a file can also be "linked" so it is rewritten
+  // automatically a few seconds after the cache changes.
+
+  const BACKUP_STORES = ['observations', 'places', 'verifications', 'user_meta', 'place_species', 'place_records', 'place_search_meta', 'taxa'];
+  // Format 2 (current): records grouped per user and per searched place, stored as compact
+  // tables (column names once, then rows of values), with each distinct taxon object stored once
+  // in a shared dictionary and referenced by index, then gzip-compressed. Format 1 (one JSON
+  // object per record, uncompressed) can still be imported.
+  const BACKUP_FORMAT = 2;
+  const AUTO_SAVE_DELAY_MS = 15000;
+  const canLinkFile = typeof window.showSaveFilePicker === 'function';
+  const canCompress = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+  // .zip needs raw deflate (no gzip/zlib wrapper), which some older browsers lack.
+  const canZip = canCompress && (() => {
+    try { new CompressionStream('deflate-raw'); new DecompressionStream('deflate-raw'); return true; } catch { return false; }
+  })();
+  const ZIP_ENTRY_NAME = 'inat-highlights-backup.json';
+
+  // ---- minimal .zip support: one deflated file per archive, written and read by hand ----
+
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    let c = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+
+  function dosDateTime(d) {
+    return {
+      time: (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2),
+      date: ((Math.max(1980, d.getFullYear()) - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(),
+    };
+  }
+
+  async function makeZip(fileName, data) {
+    const deflated = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    const name = new TextEncoder().encode(fileName);
+    const crc = crc32(data);
+    const { time, date } = dosDateTime(new Date());
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); // local file header
+    local.setUint16(4, 20, true);         // version needed
+    local.setUint16(6, 0x0800, true);     // UTF-8 file name
+    local.setUint16(8, 8, true);          // deflate
+    local.setUint16(10, time, true);
+    local.setUint16(12, date, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, deflated.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, name.length, true);
+    local.setUint16(28, 0, true);
+    const central = new DataView(new ArrayBuffer(46));
+    central.setUint32(0, 0x02014b50, true); // central directory header
+    central.setUint16(4, 20, true);
+    central.setUint16(6, 20, true);
+    central.setUint16(8, 0x0800, true);
+    central.setUint16(10, 8, true);
+    central.setUint16(12, time, true);
+    central.setUint16(14, date, true);
+    central.setUint32(16, crc, true);
+    central.setUint32(20, deflated.length, true);
+    central.setUint32(24, data.length, true);
+    central.setUint16(28, name.length, true);
+    // extra/comment lengths, disk number, attributes and local header offset all stay 0
+    const centralOffset = 30 + name.length + deflated.length;
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); // end of central directory
+    end.setUint16(8, 1, true);
+    end.setUint16(10, 1, true);
+    end.setUint32(12, 46 + name.length, true);
+    end.setUint32(16, centralOffset, true);
+    return new Blob([local, name, deflated, central, name, end], { type: 'application/zip' });
+  }
+
+  // Reads the first .json entry of a .zip (ours, or one re-zipped by Windows/macOS). Uses the
+  // central directory for sizes, so archives written with trailing data descriptors work too.
+  async function readZipJsonText(bytes) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let eocd = -1;
+    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 65535); i--) {
+      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('That .zip file is damaged or incomplete.');
+    const count = view.getUint16(eocd + 10, true);
+    let p = view.getUint32(eocd + 16, true);
+    const entries = [];
+    for (let i = 0; i < count && p + 46 <= bytes.length && view.getUint32(p, true) === 0x02014b50; i++) {
+      const nameLen = view.getUint16(p + 28, true);
+      entries.push({
+        method: view.getUint16(p + 10, true),
+        compSize: view.getUint32(p + 20, true),
+        localOffset: view.getUint32(p + 42, true),
+        name: new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen)),
+      });
+      p += 46 + nameLen + view.getUint16(p + 30, true) + view.getUint16(p + 32, true);
+    }
+    const entry = entries.find((e) => /\.json$/i.test(e.name) && !e.name.startsWith('__MACOSX/'));
+    if (!entry) throw new Error('That .zip file has no backup (.json) inside it.');
+    const lo = entry.localOffset;
+    const start = lo + 30 + view.getUint16(lo + 26, true) + view.getUint16(lo + 28, true);
+    const raw = bytes.subarray(start, start + entry.compSize);
+    if (entry.method === 0) return new TextDecoder().decode(raw);
+    if (entry.method !== 8) throw new Error('That .zip file uses a compression method this page cannot read.');
+    if (!canZip) throw new Error('This browser cannot open .zip backups. Try a current Chrome, Edge, Firefox or Safari.');
+    return new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+  }
+
+  let linkedFileHandle = null;
+  let autoSaveTimer = null;
+  let autoSaveRunning = false;
+  let autoSavePendingAgain = false;
+  let importInProgress = false;
+
+  // Column names once, then one array of values per record. Fields listed in `omit` are dropped
+  // because they can be rebuilt on import (e.g. the username every observation in a user's
+  // section shares). Missing/null values come back as absent fields.
+  function toTable(records, omit = []) {
+    const cols = [];
+    const seen = new Set(omit);
+    for (const r of records) for (const k of Object.keys(r)) if (!seen.has(k)) { seen.add(k); cols.push(k); }
+    return { cols, rows: records.map((r) => cols.map((k) => (r[k] === undefined ? null : r[k]))) };
+  }
+
+  // keepNulls: restore explicit nulls (used for taxon objects, which every record shares, so they
+  // come back exactly as stored).
+  function fromTable(t, keepNulls = false) {
+    if (!t || !Array.isArray(t.cols) || !Array.isArray(t.rows)) return [];
+    return t.rows.map((row) => {
+      const o = {};
+      for (let i = 0; i < t.cols.length; i++) {
+        const v = row[i];
+        if (v !== undefined && (v !== null || keepNulls)) o[t.cols[i]] = v;
+      }
+      return o;
+    });
+  }
+
+  // Each distinct taxon object is stored once. Keyed by its full content (not just its id) so
+  // nothing is lost when the same species carries a place-specific conservation status.
+  function makeTaxonDict() {
+    const list = [];
+    const index = new Map();
+    return {
+      list,
+      ref(t) {
+        if (!t) return null;
+        const k = JSON.stringify(t);
+        let i = index.get(k);
+        if (i === undefined) { i = list.length; list.push(t); index.set(k, i); }
+        return i;
+      },
+    };
+  }
+
+  const obsIdFromVerifyKey = (key) => Number(String(key).split('_')[0]);
+
+  // Lists what's cached, for the "choose what to export" picker.
+  async function listBackupContents() {
+    const db = await dbPromise;
+    if (!db) return { users: [], places: [] };
+    const [userMeta, placeMeta] = await Promise.all([idbGetAll(db, 'user_meta'), idbGetAll(db, 'place_search_meta')]);
+    return {
+      users: userMeta.map((m) => ({ username: m.username, count: m.count || 0 })).sort((a, b) => a.username.localeCompare(b.username)),
+      places: placeMeta.map((m) => ({ placeId: m.placeId, name: m.placeName || `Place ${m.placeId}`, count: m.count || 0 })).sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }
+
+  // selection: null for everything, or { users: Set<username>, places: Set<placeId> }.
+  // container: 'zip' (default for downloads), 'gzip' (older linked .gz files) or 'json'.
+  async function buildBackup(selection, container) {
+    const db = await dbPromise;
+    if (!db) throw new Error('This browser has no IndexedDB, so there is nothing to export.');
+    const [obsAll, verAll, userMeta, spAll, recAll, placeMeta, adminPlaces, taxonInfoAll] =
+      await Promise.all(['observations', 'verifications', 'user_meta', 'place_species', 'place_records', 'place_search_meta', 'places', 'taxa'].map((s) => idbGetAll(db, s)));
+    const wantUser = (u) => !selection || selection.users.has(u);
+    const wantPlace = (p) => !selection || selection.places.has(p);
+    const dict = makeTaxonDict();
+    const summary = { users: 0, places: 0, observations: 0, verifications: 0, species: 0, records: 0 };
+
+    const userSections = new Map();
+    const userSection = (u) => {
+      if (!userSections.has(u)) userSections.set(u, { username: u, meta: null, obs: [], ver: [] });
+      return userSections.get(u);
+    };
+    for (const m of userMeta) if (wantUser(m.username)) userSection(m.username).meta = { lastSyncAt: m.lastSyncAt, count: m.count };
+    const owner = new Map();
+    const usedAdminPlaces = new Set();
+    for (const o of obsAll) {
+      if (!wantUser(o.username)) continue;
+      owner.set(o.id, o.username);
+      for (const pid of (o.place_ids || [])) usedAdminPlaces.add(pid);
+      userSection(o.username).obs.push({ ...o, taxon: dict.ref(o.taxon) });
+    }
+    const orphanVer = [];
+    for (const v of verAll) {
+      const u = owner.get(obsIdFromVerifyKey(v.key));
+      if (u) userSection(u).ver.push(v);
+      else if (!selection) orphanVer.push(v); // its observation is gone; keep it in a full backup anyway
+    }
+
+    const placeSections = new Map();
+    const placeSection = (p) => {
+      if (!placeSections.has(p)) placeSections.set(p, { placeId: p, meta: null, species: [], records: [] });
+      return placeSections.get(p);
+    };
+    for (const m of placeMeta) if (wantPlace(m.placeId)) placeSection(m.placeId).meta = { placeName: m.placeName, lastSyncAt: m.lastSyncAt, count: m.count };
+    for (const s of spAll) if (wantPlace(s.placeId)) placeSection(s.placeId).species.push({ ...s, taxon: dict.ref(s.taxon) });
+    for (const r of recAll) if (wantPlace(r.placeId)) placeSection(r.placeId).records.push(r);
+
+    const users = [...userSections.values()].map((s) => {
+      summary.users++; summary.observations += s.obs.length; summary.verifications += s.ver.length;
+      return { username: s.username, meta: s.meta, observations: toTable(s.obs, ['username']), verifications: toTable(s.ver) };
+    });
+    const places = [...placeSections.values()].map((s) => {
+      summary.places++; summary.species += s.species.length; summary.records += s.records.length;
+      return { placeId: s.placeId, meta: s.meta, species: toTable(s.species, ['key', 'placeId']), records: toTable(s.records, ['placeId']) };
+    });
+    summary.verifications += orphanVer.length;
+
+    // Shared lookups: a partial export only carries the entries its users/places refer to.
+    const usedTaxa = new Set(dict.list.map((t) => t.id));
+    const payload = {
+      app: 'inat_highlights',
+      format: BACKUP_FORMAT,
+      dbVersion: DB_VERSION,
+      exportedAt: new Date().toISOString(),
+      taxonDict: toTable(dict.list),
+      adminPlaces: toTable(selection ? adminPlaces.filter((p) => usedAdminPlaces.has(p.id)) : adminPlaces),
+      taxonInfo: toTable(selection ? taxonInfoAll.filter((t) => usedTaxa.has(t.id)) : taxonInfoAll),
+      users,
+      places,
+      orphanVerifications: toTable(orphanVer),
+    };
+    const json = JSON.stringify(payload);
+    let blob;
+    if (container === 'zip' && canZip) {
+      blob = await makeZip(ZIP_ENTRY_NAME, new TextEncoder().encode(json));
+    } else if (container === 'gzip' && canCompress) {
+      const gz = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
+      blob = new Blob([gz], { type: 'application/gzip' });
+    } else {
+      blob = new Blob([json], { type: 'application/json' });
+    }
+    summary.bytes = blob.size;
+    return { blob, summary };
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function summarizeBackup(s) {
+    const n = (x) => (x || 0).toLocaleString();
+    const users = `${n(s.users)} user${s.users === 1 ? '' : 's'} (${n(s.observations)} observations, ${n(s.verifications)} first-record checks)`;
+    const places = `${n(s.places)} place${s.places === 1 ? '' : 's'} (${n(s.species)} species, ${n(s.records)} species records)`;
+    return `${users} and ${places}${s.bytes != null ? ` — ${formatBytes(s.bytes)}` : ''}`;
+  }
+
+  function backupFileName(label) {
+    const safe = label ? String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) : '';
+    return `inat-highlights-${safe || 'backup'}-${new Date().toISOString().slice(0, 10)}.${canZip ? 'zip' : 'json'}`;
+  }
+
+  async function exportBackupDownload(selection, label) {
+    const { blob, summary } = await buildBackup(selection, 'zip');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = backupFileName(label);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return summary;
+  }
+
+  function putChunkStrict(db, storeName, rows) {
+    return new Promise((resolve, reject) => {
+      const tx = writeTx(db, storeName);
+      const store = tx.objectStore(storeName);
+      for (const r of rows) store.put(r);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error(`Failed writing to ${storeName}`));
+      tx.onabort = () => reject(tx.error || new Error(`Write to ${storeName} was aborted`));
+    });
+  }
+
+  async function readBackupFile(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let text;
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) { // "PK": a .zip
+      try { text = await readZipJsonText(bytes); } catch (err) {
+        throw /zip|browser|method/i.test(err.message) ? err : new Error('That .zip file is damaged or incomplete.');
+      }
+    } else if (bytes[0] === 0x1f && bytes[1] === 0x8b) { // gzip magic number (older backups)
+      if (!canCompress) throw new Error('This browser cannot open compressed (.gz) backups. Try a current Chrome, Edge, Firefox or Safari.');
+      try {
+        text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      } catch { throw new Error('That compressed file is damaged or incomplete.'); }
+    } else {
+      text = new TextDecoder().decode(bytes);
+    }
+    try { return JSON.parse(text); } catch { throw new Error('That file is not a valid backup (could not read its JSON).'); }
+  }
+
+  // Turns either backup format back into plain per-store record lists.
+  function decodeBackup(data) {
+    if (!data || data.app !== 'inat_highlights') throw new Error('That file is not an iNaturalist Highlights backup.');
+    if (data.format > BACKUP_FORMAT) throw new Error('That backup was made by a newer version of this page.');
+    const out = {};
+    for (const s of BACKUP_STORES) out[s] = [];
+    if (!data.format || data.format === 1) {
+      if (!data.stores || typeof data.stores !== 'object') throw new Error('That file is not an iNaturalist Highlights backup.');
+      for (const s of BACKUP_STORES) if (Array.isArray(data.stores[s])) out[s] = data.stores[s];
+    } else {
+      const taxa = fromTable(data.taxonDict, true);
+      const taxonAt = (i) => (typeof i === 'number' && taxa[i] ? taxa[i] : null);
+      out.places = fromTable(data.adminPlaces);
+      out.taxa = fromTable(data.taxonInfo);
+      out.verifications.push(...fromTable(data.orphanVerifications));
+      for (const u of (data.users || [])) {
+        if (!u || !u.username) continue;
+        if (u.meta) out.user_meta.push({ username: u.username, ...u.meta });
+        for (const o of fromTable(u.observations)) out.observations.push({ ...o, taxon: taxonAt(o.taxon), username: u.username });
+        for (const v of fromTable(u.verifications)) out.verifications.push(v);
+      }
+      for (const p of (data.places || [])) {
+        if (!p || p.placeId == null) continue;
+        if (p.meta) out.place_search_meta.push({ placeId: p.placeId, ...p.meta });
+        for (const s of fromTable(p.species)) out.place_species.push({ ...s, taxon: taxonAt(s.taxon), placeId: p.placeId, key: `${p.placeId}_${s.taxonId}` });
+        for (const r of fromTable(p.records)) out.place_records.push({ ...r, placeId: p.placeId });
+      }
+    }
+    const summary = {
+      users: new Set(out.user_meta.map((m) => m.username).concat(out.observations.map((o) => o.username))).size,
+      places: new Set(out.place_search_meta.map((m) => m.placeId).concat(out.place_species.map((s) => s.placeId))).size,
+      observations: out.observations.length,
+      verifications: out.verifications.length,
+      species: out.place_species.length,
+      records: out.place_records.length,
+    };
+    return { stores: out, summary };
+  }
+
+  // Merges the file's records into the cache: records with the same key are overwritten by the
+  // file's copy, everything else already in the cache is kept.
+  async function importBackupFile(file, onProgress) {
+    const db = await dbPromise;
+    if (!db) throw new Error('This browser has no IndexedDB, so the backup cannot be loaded.');
+    const { stores, summary } = decodeBackup(await readBackupFile(file));
+    const total = BACKUP_STORES.reduce((s, k) => s + stores[k].length, 0);
+    let done = 0;
+    importInProgress = true;
+    try {
+      for (const name of BACKUP_STORES) {
+        const rows = stores[name];
+        for (let i = 0; i < rows.length; i += 2000) {
+          await putChunkStrict(db, name, rows.slice(i, i + 2000));
+          done += Math.min(2000, rows.length - i);
+          onProgress && onProgress(done, total);
+        }
+      }
+    } finally {
+      importInProgress = false;
+    }
+    scheduleAutoSave();
+    return summary;
+  }
+
+  // Linked-file handles live in their own tiny database so the main cache schema is untouched.
+  function openSettingsDB() {
+    return new Promise((resolve) => {
+      if (!('indexedDB' in window)) { resolve(null); return; }
+      const req = indexedDB.open('inat_highlights_settings', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('kv');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  }
+  async function settingsSet(key, value) {
+    const sdb = await openSettingsDB();
+    if (!sdb) return;
+    await new Promise((resolve) => {
+      const tx = sdb.transaction('kv', 'readwrite');
+      if (value === undefined) tx.objectStore('kv').delete(key); else tx.objectStore('kv').put(value, key);
+      tx.oncomplete = tx.onerror = tx.onabort = () => resolve();
+    });
+    sdb.close();
+  }
+  async function settingsGet(key) {
+    const sdb = await openSettingsDB();
+    if (!sdb) return undefined;
+    const value = await new Promise((resolve) => {
+      const req = sdb.transaction('kv', 'readonly').objectStore('kv').get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(undefined);
+    });
+    sdb.close();
+    return value;
+  }
+
+  async function linkedFilePermission(request) {
+    if (!linkedFileHandle) return 'denied';
+    const opts = { mode: 'readwrite' };
+    try {
+      let p = await linkedFileHandle.queryPermission(opts);
+      if (p !== 'granted' && request) p = await linkedFileHandle.requestPermission(opts);
+      return p;
+    } catch { return 'denied'; }
+  }
+
+  // A linked plain .json file (from before .zip support, or a name typed by hand) is renamed in
+  // place to .zip so every auto-save is compressed. Renaming onto an existing name silently
+  // replaces that file, so the new name gets an "-autosave" suffix rather than reusing the plain
+  // base name, which could belong to an older backup. Browsers that can't rename local files
+  // keep writing .json and the panel offers a one-click switch instead.
+  let zipSwitchFailed = false;
+  let renameNotice = ''; // shown once, in front of the next status message after a rename
+  function takeRenameNotice() { const n = renameNotice; renameNotice = ''; return n; }
+  async function compressLinkedFileIfNeeded() {
+    if (!canZip || !linkedFileHandle || zipSwitchFailed || !/\.json$/i.test(linkedFileHandle.name)) return null;
+    const oldName = linkedFileHandle.name;
+    const zipName = oldName.replace(/\.json$/i, '-autosave.zip');
+    try {
+      if (typeof linkedFileHandle.move !== 'function') throw new Error('Renaming files is not supported in this browser.');
+      await linkedFileHandle.move(zipName);
+      await settingsSet('linkedFileHandle', linkedFileHandle); // stored copy must point at the new name
+      return `Renamed ${oldName} to ${linkedFileHandle.name} so auto-saves are compressed.`;
+    } catch (err) {
+      zipSwitchFailed = true;
+      return null;
+    } finally {
+      updateBackupUI();
+    }
+  }
+
+  async function writeLinkedFile() {
+    // Always the full cache, compressed: .zip normally, .gz for files linked before .zip support.
+    // Plain .json only if the browser can't compress or couldn't rename the file (see above).
+    const renamed = await compressLinkedFileIfNeeded();
+    if (renamed) { renameNotice = `${renamed} `; setBackupStatus(`${renamed} Saving...`); }
+    const name = linkedFileHandle.name;
+    const container = /\.json$/i.test(name) ? 'json' : /\.gz$/i.test(name) ? 'gzip' : 'zip';
+    const { blob, summary } = await buildBackup(null, container);
+    const writable = await linkedFileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return summary;
+  }
+
+  function scheduleAutoSave() {
+    if (!linkedFileHandle || importInProgress) return;
+    if (autoSaveRunning) { autoSavePendingAgain = true; return; }
+    if (autoSaveTimer) return; // already scheduled; fires AUTO_SAVE_DELAY_MS after the first unsaved change
+    autoSaveTimer = setTimeout(runAutoSave, AUTO_SAVE_DELAY_MS);
+  }
+
+  async function runAutoSave() {
+    autoSaveTimer = null;
+    if (!linkedFileHandle) return;
+    if (await linkedFilePermission(false) !== 'granted') { updateBackupUI(); return; }
+    autoSaveRunning = true;
+    autoSavePendingAgain = false;
+    try {
+      await writeLinkedFile();
+      setBackupStatus(`${takeRenameNotice()}Auto-saved to ${linkedFileHandle.name} at ${new Date().toLocaleTimeString()}.`);
+    } catch (err) {
+      setBackupStatus(`Auto-save to ${linkedFileHandle.name} failed: ${err.message}`);
+    } finally {
+      autoSaveRunning = false;
+      if (autoSavePendingAgain) scheduleAutoSave();
+    }
+  }
+
+  function setBackupStatus(text) {
+    const line = document.getElementById('backupStatusLine');
+    if (line) line.textContent = text;
+  }
+
+  async function updateBackupUI() {
+    const linkBtn = document.getElementById('linkFileBtn');
+    const resumeBtn = document.getElementById('resumeAutoSaveBtn');
+    const unlinkBtn = document.getElementById('unlinkFileBtn');
+    const info = document.getElementById('linkedFileInfo');
+    if (!canLinkFile) {
+      linkBtn.style.display = 'none';
+      info.textContent = 'Auto-save to a file needs Chrome or Edge; use Export / Import here.';
+      return;
+    }
+    if (!linkedFileHandle) {
+      linkBtn.style.display = '';
+      linkBtn.textContent = 'Link auto-save file…';
+      resumeBtn.style.display = 'none';
+      unlinkBtn.style.display = 'none';
+      info.textContent = 'No auto-save file linked.';
+      return;
+    }
+    const granted = (await linkedFilePermission(false)) === 'granted';
+    const uncompressed = canZip && /\.json$/i.test(linkedFileHandle.name);
+    linkBtn.style.display = '';
+    linkBtn.textContent = uncompressed && zipSwitchFailed ? 'Switch to compressed .zip…' : 'Change file…';
+    unlinkBtn.style.display = '';
+    resumeBtn.style.display = granted ? 'none' : '';
+    const fmt = /\.json$/i.test(linkedFileHandle.name) ? 'uncompressed' : 'compressed';
+    info.textContent = granted
+      ? `Auto-saving to ${linkedFileHandle.name} (${fmt}).` + (uncompressed && zipSwitchFailed ? ' This browser could not rename it to .zip; click "Switch to compressed .zip…" to pick a .zip file instead.' : '')
+      : `Linked to ${linkedFileHandle.name} — auto-save paused until you click Resume (the browser asks again after a reload).` + (uncompressed ? ' It will switch to a compressed .zip on the next save.' : '');
+  }
+
+  function idbGet(db, storeName, key) {
+    return new Promise((resolve) => {
+      if (!db) { resolve(undefined); return; }
+      const req = db.transaction(storeName, 'readonly').objectStore(storeName).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(undefined);
+    });
+  }
+
+  function idbGetAll(db, storeName) {
+    return new Promise((resolve) => {
+      if (!db) { resolve([]); return; }
+      const req = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  }
+
+  function idbPut(db, storeName, value) {
+    return new Promise((resolve) => {
+      if (!db) { resolve(); return; }
+      const tx = writeTx(db, storeName);
+      tx.objectStore(storeName).put(value);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  function idbPutMany(db, storeName, values) {
+    return new Promise((resolve) => {
+      if (!db || !values.length) { resolve(); return; }
+      const tx = writeTx(db, storeName);
+      const store = tx.objectStore(storeName);
+      for (const v of values) store.put(v);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  function getObservationsForUser(db, username) {
+    return new Promise((resolve) => {
+      if (!db) { resolve([]); return; }
+      const idx = db.transaction('observations', 'readonly').objectStore('observations').index('username');
+      const req = idx.getAll(IDBKeyRange.only(username));
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  }
+
+  function deleteObservationsForUser(db, username) {
+    return new Promise((resolve) => {
+      if (!db) { resolve(); return; }
+      const tx = writeTx(db, 'observations');
+      const idx = tx.objectStore('observations').index('username');
+      const req = idx.openKeyCursor(IDBKeyRange.only(username));
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { tx.objectStore('observations').delete(cursor.primaryKey); cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  function putObservationsBatch(db, username, observations) {
+    return new Promise((resolve) => {
+      if (!db || !observations.length) { resolve(); return; }
+      const tx = writeTx(db, 'observations');
+      const store = tx.objectStore('observations');
+      for (const obs of observations) store.put({ ...obs, username });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  function getSpeciesForPlace(db, placeId) {
+    return new Promise((resolve) => {
+      if (!db) { resolve([]); return; }
+      const idx = db.transaction('place_species', 'readonly').objectStore('place_species').index('placeId');
+      const req = idx.getAll(IDBKeyRange.only(placeId));
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  }
+
+  function deleteSpeciesForPlace(db, placeId) {
+    return new Promise((resolve) => {
+      if (!db) { resolve(); return; }
+      const tx = writeTx(db, 'place_species');
+      const idx = tx.objectStore('place_species').index('placeId');
+      const req = idx.openKeyCursor(IDBKeyRange.only(placeId));
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { tx.objectStore('place_species').delete(cursor.primaryKey); cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  function putSpeciesBatch(db, placeId, entries) {
+    return new Promise((resolve) => {
+      if (!db || !entries.length) { resolve(); return; }
+      const tx = writeTx(db, 'place_species');
+      const store = tx.objectStore('place_species');
+      for (const entry of entries) store.put({ ...entry, placeId, key: `${placeId}_${entry.taxonId}` });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  function getRecordsForPlace(db, placeId) {
+    return new Promise((resolve) => {
+      if (!db) { resolve([]); return; }
+      const idx = db.transaction('place_records', 'readonly').objectStore('place_records').index('placeId');
+      const req = idx.getAll(IDBKeyRange.only(placeId));
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  }
+
+  function deleteRecordsForPlace(db, placeId) {
+    return new Promise((resolve) => {
+      if (!db) { resolve(); return; }
+      const tx = writeTx(db, 'place_records');
+      const idx = tx.objectStore('place_records').index('placeId');
+      const req = idx.openKeyCursor(IDBKeyRange.only(placeId));
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { tx.objectStore('place_records').delete(cursor.primaryKey); cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  // Only the fields the app actually renders/computes with — the raw API objects carry
+  // identifications, comments, quality metrics, projects, etc. that we never use, and are
+  // too large to store as one blob per user/place (see the v2 migration note above).
+  function trimTaxon(t) {
+    if (!t) return null;
+    return {
+      id: t.id,
+      name: t.name,
+      preferred_common_name: t.preferred_common_name || null,
+      rank: t.rank,
+      rank_level: t.rank_level,
+      threatened: t.threatened === true,
+      default_photo: t.default_photo && t.default_photo.square_url ? { square_url: t.default_photo.square_url } : null,
+      conservation_status: t.conservation_status ? { status_name: t.conservation_status.status_name || null } : null,
+    };
+  }
+
+  function trimObservation(obs) {
+    return {
+      id: obs.id,
+      observed_on: obs.observed_on || null,
+      place_guess: obs.place_guess || null,
+      place_ids: obs.place_ids || [],
+      quality_grade: obs.quality_grade || null,
+      geoprivacy: obs.geoprivacy || null,
+      taxon_geoprivacy: obs.taxon_geoprivacy || null,
+      taxon: trimTaxon(obs.taxon),
+    };
+  }
+
+  // ---------- domain logic ----------
+
+  function isSpeciesRank(taxon) {
+    if (!taxon) return false;
+    if (typeof taxon.rank_level === 'number') return taxon.rank_level <= 10;
+    return ['species', 'subspecies', 'variety', 'form', 'hybrid'].includes(taxon.rank);
+  }
+
+  // iNaturalist "admin_level" follows Country=0, State/Province=10, County=20 (verified against live data).
+  // Louisiana calls its counties "parishes", so we also match on name as a safety net.
+  function classifyPlace(place) {
+    if (!place) return null;
+    const name = place.name || '';
+    if (place.admin_level === 0) return 'country';
+    if (place.admin_level != null && place.admin_level > 0 && place.admin_level <= 10) return 'state';
+    if (/parish/i.test(name)) return 'county';
+    if (place.admin_level != null && place.admin_level > 10 && place.admin_level <= 20) return 'county';
+    return null;
+  }
+
+  function getObsPlaceOfLevel(obs, placeCache, level) {
+    if (!obs.place_ids) return null;
+    for (const pid of obs.place_ids) {
+      const p = placeCache[pid];
+      if (p && classifyPlace(p) === level) return p;
+    }
+    return null;
+  }
+
+  // Shared pagination core for both a full fetch and an incremental diff — id_above pagination
+  // still works correctly when an extra filter (like updated_since) narrows the result set,
+  // since results stay ordered by id ascending within that filtered set (verified against the
+  // live API: filtered pages returned arbitrary old ids with recent updated_at, correctly ordered by id).
+  async function syncObservationPages(username, myGen, db, extraQuery, onProgress) {
+    const usernameKey = username.toLowerCase();
+    const touched = [];
+    let idAbove = 0;
+    while (true) {
+      if (myGen !== currentGeneration) break;
+      const url = `${API_BASE}/observations?user_login=${encodeURIComponent(username)}&per_page=${PAGE_SIZE}&order=asc&order_by=id&id_above=${idAbove}${extraQuery}`;
+      const data = await throttledFetch(url, userGenCheck(myGen));
+      if (!data.results || data.results.length === 0) break;
+      const trimmed = data.results.map(trimObservation);
+      touched.push(...trimmed);
+      // Persist each page as its own small transaction rather than accumulating everything
+      // into one giant blob — see the v2 migration note on the 'observations' store. Since the
+      // store is keyed by observation id, this also naturally upserts edited observations.
+      await putObservationsBatch(db, usernameKey, trimmed);
+      idAbove = data.results[data.results.length - 1].id;
+      onProgress(touched.length, data.total_results || touched.length);
+      if (data.results.length < PAGE_SIZE) break;
+    }
+    return touched;
+  }
+
+  function fetchAllObservations(username, myGen, db, onProgress) {
+    return syncObservationPages(username, myGen, db, '', onProgress);
+  }
+
+  // Only observations created or edited since the last sync — catches both new observations
+  // and re-identifications/edits to old ones, without redownloading the whole history.
+  function fetchObservationDiff(username, myGen, db, sinceIso, onProgress) {
+    return syncObservationPages(username, myGen, db, `&updated_since=${encodeURIComponent(sinceIso)}`, onProgress);
+  }
+
+  async function fetchPlaces(placeIds, myGen, onProgress) {
+    const db = await dbPromise;
+    const existing = await idbGetAll(db, 'places');
+    const cache = {};
+    for (const p of existing) cache[p.id] = p;
+    const missing = placeIds.filter((id) => !cache[id]);
+    const chunkSize = 100;
+    let done = 0;
+    const fresh = [];
+    for (let i = 0; i < missing.length; i += chunkSize) {
+      if (myGen !== currentGeneration) break;
+      const chunk = missing.slice(i, i + chunkSize);
+      const url = `${API_BASE}/places/${chunk.join(',')}`;
+      const data = await throttledFetch(url, userGenCheck(myGen));
+      for (const p of (data.results || [])) {
+        const rec = { id: p.id, name: p.name, display_name: p.display_name, admin_level: p.admin_level };
+        cache[p.id] = rec;
+        fresh.push(rec);
+      }
+      done += chunk.length;
+      onProgress(done, missing.length);
+    }
+    await idbPutMany(db, 'places', fresh);
+    return cache;
+  }
+
+  // ---------- place-search mode ----------
+
+  // Autocomplete suggestions as the user types a place name. Deliberately NOT persisted to
+  // IndexedDB — query-dependent and cheap — but memoized in-memory per page load so retyping
+  // the same prefix (e.g. backspacing then retyping) doesn't re-hit the API.
+  // Suggestions must appear while someone types, even when background verification has a long
+  // queue of requests waiting, so they skip the queue. They still respect a rate-limit backoff and
+  // move the shared clock forward, so the queue simply waits one extra interval after each.
+  async function quickFetch(url) {
+    if (Date.now() < rateLimitedUntil) throw new Error('Rate limited');
+    lastRequestAt = Math.max(lastRequestAt, Date.now());
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json();
+  }
+
+  const placeAutocompleteCache = new Map();
+  async function autocompletePlaces(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    if (placeAutocompleteCache.has(q)) return placeAutocompleteCache.get(q);
+    const url = `${API_BASE}/places/autocomplete?q=${encodeURIComponent(query.trim())}&per_page=10`;
+    const data = await quickFetch(url);
+    const results = (data.results || []).map((p) => ({
+      id: p.id, name: p.name, display_name: p.display_name, admin_level: p.admin_level,
+    }));
+    placeAutocompleteCache.set(q, results);
+    return results;
+  }
+
+  const userAutocompleteCache = new Map();
+  async function autocompleteUsers(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    if (userAutocompleteCache.has(q)) return userAutocompleteCache.get(q);
+    const data = await quickFetch(`${API_BASE}/users/autocomplete?q=${encodeURIComponent(query.trim())}&per_page=10`);
+    const results = (data.results || []).map((u) => ({
+      login: u.login, name: u.name || '', icon: u.icon_url || u.icon || '', count: u.observations_count || 0,
+    }));
+    userAutocompleteCache.set(q, results);
+    return results;
+  }
+
+  // Paginates /observations/species_counts for a place — the aggregate equivalent of
+  // fetchAllObservations for user mode: one row per species (with a count), not one per
+  // observation, which keeps this tractable even for places with millions of records.
+  // The endpoint's own pagination is capped around page*per_page <= 10000 by the API, so very
+  // species-rich places (e.g. whole countries) may not return their full list; we stop cleanly
+  // when the API stops returning pages rather than erroring.
+  async function fetchAllSpeciesCounts(placeId, isCancelled, onProgress) {
+    const perPage = 500;
+    let page = 1;
+    const out = [];
+    while (true) {
+      if (isCancelled()) break;
+      const url = `${API_BASE}/observations/species_counts?place_id=${placeId}&per_page=${perPage}&page=${page}&verifiable=true`;
+      let data;
+      try {
+        data = await throttledFetch(url, isCancelled);
+      } catch (e) {
+        break; // API's pagination ceiling reached, or a transient error — keep what we have
+      }
+      if (!data.results || data.results.length === 0) break;
+      for (const r of data.results) {
+        out.push({ taxonId: r.taxon.id, taxon: trimTaxon(r.taxon), count: r.count });
+      }
+      onProgress(out.length, data.total_results || out.length);
+      if (data.results.length < perPage || page * perPage >= 10000) break;
+      page++;
+    }
+    return out;
+  }
+
+  async function fetchPlaceTotalObservations(placeId, isCancelled) {
+    const url = `${API_BASE}/observations?place_id=${placeId}&per_page=0&verifiable=true`;
+    const data = await throttledFetch(url, isCancelled);
+    return data.total_results || 0;
+  }
+
+  function buildLifers(observations) {
+    const best = new Map();
+    for (const obs of observations) {
+      if (!isSpeciesRank(obs.taxon)) continue;
+      const key = obs.taxon.id;
+      const existing = best.get(key);
+      if (!existing || (obs.observed_on && (!existing.observed_on || obs.observed_on < existing.observed_on))) {
+        best.set(key, obs);
+      }
+    }
+    return Array.from(best.values());
+  }
+
+  function buildPersonalPlaceFirsts(observations, placeCache) {
+    const levels = ['country', 'state', 'county'];
+    const bestMap = { country: new Map(), state: new Map(), county: new Map() };
+    for (const obs of observations) {
+      if (!isSpeciesRank(obs.taxon)) continue;
+      for (const level of levels) {
+        const place = getObsPlaceOfLevel(obs, placeCache, level);
+        if (!place) continue;
+        const key = obs.taxon.id + '|' + place.id;
+        const existing = bestMap[level].get(key);
+        if (!existing || (obs.observed_on && (!existing.obs.observed_on || obs.observed_on < existing.obs.observed_on))) {
+          bestMap[level].set(key, { obs, place });
+        }
+      }
+    }
+    const out = {};
+    for (const level of levels) out[level] = Array.from(bestMap[level].values());
+    // World-first candidates are simply the user's earliest sighting of each species (their
+    // lifers); verification then checks them against every observation on iNaturalist.
+    out.world = buildLifers(observations).map((obs) => ({ obs, place: WORLD_PLACE }));
+    return out;
+  }
+
+  // Pseudo-place for the World Firsts tab: id 0 keeps verification keys distinct from real places.
+  const WORLD_PLACE = { id: 0, name: 'Worldwide' };
+  const FIRST_LEVELS = ['country', 'state', 'county', 'world'];
+
+  // Species-level notability: conservation status. Shared by user mode (which adds a
+  // per-observation geoprivacy reason on top) and place mode (species_counts has no
+  // per-observation data, so this is the whole story there).
+  //
+  // Notable categories:
+  //   rare     — few observations of the species on iNaturalist worldwide (threshold is adjustable)
+  //   global   — globally threatened: IUCN Red List Vulnerable or worse (few exist in the world)
+  //   local    — a threatened/protected status attached to the taxon in iNaturalist's data
+  //   obscured — user mode only: the sighting's location is hidden (sensitive species)
+  // rare/global come from a per-species lookup (taxonInfo, cached in the 'taxa' store) that fills
+  // in in the background, so reasons are computed at render time rather than once at load.
+
+  const IUCN_NAMES = { 30: 'Vulnerable', 40: 'Endangered', 50: 'Critically Endangered', 60: 'Extinct in the Wild', 70: 'Extinct' };
+  const taxonInfo = new Map(); // taxonId -> { id, observations_count, iucn, iucnCode, fetchedAt }
+
+  const NOTABLE_CATEGORIES = [
+    { value: 'all', label: 'All notable' },
+    { value: 'rare', label: 'Rare (few observations worldwide)' },
+    { value: 'global', label: 'Endangered worldwide (IUCN Vulnerable or worse)' },
+    { value: 'local', label: 'Protected / threatened status' },
+    { value: 'obscured', label: 'Obscured location (sensitive)', userOnly: true },
+  ];
+  const notableSettings = { category: 'all', rareThreshold: 100 };
+  try {
+    const saved = JSON.parse(localStorage.getItem('inat_notable_settings') || 'null');
+    if (saved && NOTABLE_CATEGORIES.some((c) => c.value === saved.category)) notableSettings.category = saved.category;
+    if (saved && saved.rareThreshold > 0) notableSettings.rareThreshold = Math.floor(saved.rareThreshold);
+  } catch {}
+  function saveNotableSettings() {
+    try { localStorage.setItem('inat_notable_settings', JSON.stringify(notableSettings)); } catch {}
+  }
+
+  function taxonNotableReasons(taxon, obscured) {
+    const reasons = [];
+    const info = taxonInfo.get(taxon.id);
+    const globalName = info && info.iucn >= 30 ? IUCN_NAMES[info.iucn] : null;
+    if (globalName) reasons.push({ cat: 'global', text: `${globalName} worldwide (IUCN)`, cls: 'danger' });
+    if (info && isSpeciesRank(taxon) && info.observations_count != null && info.observations_count < notableSettings.rareThreshold) {
+      const n = info.observations_count;
+      reasons.push({ cat: 'rare', text: `Rare: ${n.toLocaleString()} observation${n === 1 ? '' : 's'} worldwide`, cls: 'warn' });
+    }
+    const cs = taxon.conservation_status;
+    if (taxon.threatened === true || (cs && cs.status_name && !/least concern/i.test(cs.status_name))) {
+      const sameAsGlobal = globalName && cs && cs.status_name && cs.status_name.toLowerCase() === globalName.toLowerCase();
+      if (!sameAsGlobal) reasons.push({ cat: 'local', text: cs && cs.status_name ? `Conservation status: ${cs.status_name}` : 'Threatened', cls: 'warn' });
+    }
+    if (obscured) reasons.push({ cat: 'obscured', text: 'Location obscured (sensitive species)', cls: 'warn' });
+    return reasons;
+  }
+
+  function effectiveNotableCategory(ns) {
+    const c = NOTABLE_CATEGORIES.find((x) => x.value === notableSettings.category);
+    return c && (ns === 'user' || !c.userOnly) ? c.value : 'all';
+  }
+
+  function reasonsMatchCategory(reasons, ns) {
+    const cat = effectiveNotableCategory(ns);
+    if (cat === 'all') return reasons.length > 0;
+    return reasons.some((r) => r.cat === cat);
+  }
+
+  // One candidate per species, not one per observation — a species seen on five different days
+  // would otherwise show up as five near-identical cards. Keeps the earliest sighting per taxon,
+  // matching how lifers are deduped, and remembers whether any sighting had its location hidden.
+  function identifyNotable(observations) {
+    const best = new Map();
+    for (const obs of observations) {
+      const t = obs.taxon;
+      if (!t) continue;
+      const geo = obs.geoprivacy || obs.taxon_geoprivacy;
+      const obscured = geo === 'obscured' || geo === 'private';
+      const existing = best.get(t.id);
+      if (!existing) { best.set(t.id, { obs, obscured }); continue; }
+      if (obscured) existing.obscured = true;
+      if (obs.observed_on && (!existing.obs.observed_on || obs.observed_on < existing.obs.observed_on)) existing.obs = obs;
+    }
+    return Array.from(best.values());
+  }
+
+  function userNotableList() {
+    const out = [];
+    for (const c of state.notable) {
+      const reasons = taxonNotableReasons(c.obs.taxon, c.obscured);
+      if (reasonsMatchCategory(reasons, 'user')) out.push({ obs: c.obs, reasons });
+    }
+    return out;
+  }
+
+  function placeNotableList() {
+    const out = [];
+    for (const entry of placeState.speciesList) {
+      const reasons = taxonNotableReasons(entry.taxon, false);
+      if (reasonsMatchCategory(reasons, 'place')) out.push({ ...entry, reasons });
+    }
+    return out;
+  }
+
+  // ---------- worldwide species facts (observation count + global IUCN status) ----------
+
+  const TAXON_INFO_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // counts drift slowly; refresh monthly
+  const TAXA_PER_REQUEST = 30; // the /taxa/:ids endpoint rejects more than this ("Too many IDs")
+  const taxonEnrich = { user: { done: 0, total: 0, failed: 0, running: false }, place: { done: 0, total: 0, failed: 0, running: false } };
+  let taxonInfoLoaded = null;
+
+  function loadTaxonInfoCache() {
+    if (!taxonInfoLoaded) {
+      taxonInfoLoaded = (async () => {
+        const db = await dbPromise;
+        for (const r of await idbGetAll(db, 'taxa')) if (!taxonInfo.has(r.id)) taxonInfo.set(r.id, r);
+      })();
+    }
+    return taxonInfoLoaded;
+  }
+
+  function taxonInfoFromApi(t) {
+    // Global statuses have no place; prefer the IUCN Red List's if there are several.
+    const globals = (t.conservation_statuses || []).filter((s) => !s.place && !s.place_id);
+    const pick = globals.find((s) => /iucn/i.test(s.authority || '')) || globals.sort((a, b) => (b.iucn || 0) - (a.iucn || 0))[0];
+    return {
+      id: t.id,
+      observations_count: typeof t.observations_count === 'number' ? t.observations_count : null,
+      iucn: pick && typeof pick.iucn === 'number' ? pick.iucn : null,
+      iucnCode: pick ? pick.status || null : null,
+      fetchedAt: Date.now(),
+    };
+  }
+
+  async function enrichTaxa(mode, taxonIds, isCancelled, onUpdate) {
+    await loadTaxonInfoCache();
+    const now = Date.now();
+    const missing = [...new Set(taxonIds)].filter((id) => {
+      const info = taxonInfo.get(id);
+      return !info || now - info.fetchedAt > TAXON_INFO_MAX_AGE_MS;
+    });
+    const prog = taxonEnrich[mode];
+    Object.assign(prog, { done: 0, total: missing.length, failed: 0, running: missing.length > 0 });
+    onUpdate();
+    const db = await dbPromise;
+    for (let i = 0; i < missing.length; i += TAXA_PER_REQUEST) {
+      if (isCancelled()) { prog.running = false; return; }
+      const chunk = missing.slice(i, i + TAXA_PER_REQUEST);
+      try {
+        const data = await throttledFetch(`${API_BASE}/taxa/${chunk.join(',')}`, isCancelled);
+        const recs = (data.results || []).map(taxonInfoFromApi);
+        for (const r of recs) taxonInfo.set(r.id, r);
+        await idbPutMany(db, 'taxa', recs);
+      } catch (e) {
+        if (isCancelled()) { prog.running = false; return; }
+        prog.failed += chunk.length;
+      }
+      prog.done += chunk.length;
+      onUpdate();
+    }
+    prog.running = false;
+    onUpdate();
+  }
+
+  function enrichNoteHtml(mode) {
+    const p = taxonEnrich[mode];
+    const parts = [];
+    if (p.running) parts.push(`Looking up worldwide observation counts and IUCN status: ${p.done.toLocaleString()} / ${p.total.toLocaleString()} species checked — rare and endangered species appear here as they're found.`);
+    if (p.failed) parts.push(`${p.failed.toLocaleString()} species couldn't be looked up (API error); reload later to retry.`);
+    return parts.length ? `<div class="status-line">${escapeHtml(parts.join(' '))}</div>` : '';
+  }
+
+  function notableControlsHtml(ns) {
+    const cats = NOTABLE_CATEGORIES.filter((c) => ns === 'user' || !c.userOnly);
+    const current = effectiveNotableCategory(ns);
+    return `
+      <div class="list-controls">
+        <label>Show
+          <select data-notable-category="${ns}">
+            ${cats.map((c) => `<option value="${c.value}"${current === c.value ? ' selected' : ''}>${escapeHtml(c.label)}</option>`).join('')}
+          </select>
+        </label>
+        <label>Rare = fewer than
+          <input type="number" min="1" step="1" data-notable-threshold value="${notableSettings.rareThreshold}" style="width:100px;">
+          observations worldwide
+        </label>
+      </div>`;
+  }
+
+  function distinctPlacesVisited(observations, placeCache, level) {
+    const set = new Set();
+    for (const obs of observations) {
+      const p = getObsPlaceOfLevel(obs, placeCache, level);
+      if (p) set.add(p.id);
+    }
+    return set.size;
+  }
+
+  // Includes taxonId so a re-identified observation (e.g. re-IDed to a different species during
+  // a diff refresh) doesn't inherit a stale verdict computed for its old taxon at this place.
+  function verifyKey(obsId, placeId, taxonId) { return `${obsId}_${placeId}_${taxonId}`; }
+
+  function placeRecordKey(placeId, taxonId) { return `${placeId}_${taxonId}`; }
+
+  // ---------- rendering ----------
+
+  const el = (id) => document.getElementById(id);
+  function freshListControls(tabs, defaultSort) {
+    const controls = {};
+    for (const tab of tabs) controls[tab] = { sort: defaultSort, page: 1, pageSize: DEFAULT_PAGE_SIZE };
+    return controls;
+  }
+  const state = {
+    currentUsername: '',
+    observations: [],
+    placeCache: {},
+    lifers: [],
+    placeFirsts: { country: [], state: [], county: [], world: [] },
+    notable: [],
+    listControls: freshListControls(['lifers', 'country', 'state', 'county', 'world', 'notable'], 'date_desc'),
+    verifyResults: {}, // key -> { status: 'pending'|'confirmed'|'not_first'|'error', earliestUser, earliestDate, level }
+    verifyProgress: { done: 0, total: 0, confirmed: 0 },
+  };
+
+  const placeState = {
+    currentPlace: null, // { id, name, display_name, admin_level }
+    speciesList: [], // [{ taxonId, taxon, count }]
+    totalObservations: 0,
+    listControls: freshListControls(['species', 'notable', 'records'], 'count_desc'),
+    recordResults: {}, // placeRecordKey -> { status: 'pending'|'done'|'error', obsId, user, date }
+  };
+
+  function taxonName(taxon) {
+    return taxon.preferred_common_name || taxon.name;
+  }
+
+  function photoUrl(taxon) {
+    return (taxon.default_photo && taxon.default_photo.square_url) || '';
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function verdictBadge(key) {
+    const r = state.verifyResults[key];
+    if (!r || r.status === 'pending') return { text: 'Checking…', cls: 'pending' };
+    if (r.status === 'confirmed') return { text: r.level === 'world' ? 'First iNaturalist record in the world' : `Confirmed first ${r.level} record`, cls: 'confirmed' };
+    if (r.status === 'not_first') return { text: `Not first — ${r.earliestUser || 'another observer'} recorded it ${r.earliestDate || 'earlier'}`, cls: 'not-first' };
+    return { text: 'Verification failed', cls: 'error' };
+  }
+
+  function obsCardHtml(obs, badges, verifyKeyAttr) {
+    const t = obs.taxon;
+    if (!t) return '';
+    const img = photoUrl(t);
+    const common = taxonName(t);
+    const showSci = common !== t.name;
+    const place = obs.place_guess || '';
+    const date = obs.observed_on || 'Unknown date';
+    const allBadges = [...(badges || [])];
+    if (verifyKeyAttr) {
+      const v = verdictBadge(verifyKeyAttr);
+      allBadges.push({ text: v.text, cls: v.cls, verify: true });
+    }
+    return `
+      <a class="obs-card" href="https://www.inaturalist.org/observations/${obs.id}" target="_blank" rel="noopener"${verifyKeyAttr ? ` data-verify-key="${verifyKeyAttr}"` : ''}>
+        ${img ? `<img class="obs-thumb" src="${img}" alt="">` : `<div class="obs-thumb"></div>`}
+        <div class="obs-info">
+          <div class="obs-name">${escapeHtml(common)}${showSci ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
+          <div class="obs-meta">${escapeHtml(date)} &middot; ${escapeHtml(place)}</div>
+          ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-verify-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}
+        </div>
+      </a>`;
+  }
+
+  function matchesFilter(taxon, filterText) {
+    if (!filterText) return true;
+    const hay = ((taxon.preferred_common_name || '') + ' ' + (taxon.name || '')).toLowerCase();
+    return hay.includes(filterText.toLowerCase());
+  }
+
+  function oneYearAgoIso() {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+  function recentLifers() {
+    const since = oneYearAgoIso();
+    return state.lifers.filter((o) => (o.observed_on || '') > since);
+  }
+
+  function userStatsList() {
+    const obs = state.observations;
+    return [
+      { label: 'Observations', num: obs.length },
+      { label: 'Species Observed', num: new Set(obs.filter((o) => isSpeciesRank(o.taxon)).map((o) => o.taxon.id)).size },
+      // Every species' first sighting is a lifer, so the all-time count would just repeat Species
+      // Observed; the last 12 months shows how fast the life list is still growing.
+      { label: 'New Species, Last 12 Months', num: recentLifers().length },
+      { label: 'Countries Visited', num: distinctPlacesVisited(obs, state.placeCache, 'country') },
+      { label: 'States / Provinces', num: distinctPlacesVisited(obs, state.placeCache, 'state') },
+      { label: 'Counties / Parishes', num: distinctPlacesVisited(obs, state.placeCache, 'county') },
+      { label: 'Confirmed First Records', num: state.verifyProgress.confirmed },
+      { label: 'Notable Finds', num: userNotableList().length },
+    ];
+  }
+
+  function renderStats() {
+    const stats = userStatsList();
+    el('statGrid').innerHTML = stats.map((s) => `<div class="stat-card"><div class="num">${s.num}</div><div class="label">${s.label}</div></div>`).join('');
+  }
+
+  function setVerifyStatusLine(text) {
+    const line = el('verifyStatusLine');
+    if (line) line.textContent = text;
+  }
+
+  const SORT_COMPARATORS = {
+    date_desc: (accessors) => (a, b) => (accessors.dateFn(b) || '').localeCompare(accessors.dateFn(a) || ''),
+    date_asc: (accessors) => (a, b) => (accessors.dateFn(a) || '').localeCompare(accessors.dateFn(b) || ''),
+    name_asc: (accessors) => (a, b) => accessors.nameFn(a).localeCompare(accessors.nameFn(b)),
+    name_desc: (accessors) => (a, b) => accessors.nameFn(b).localeCompare(accessors.nameFn(a)),
+    place_asc: (accessors) => (a, b) => accessors.placeFn(a).localeCompare(accessors.placeFn(b)),
+    place_desc: (accessors) => (a, b) => accessors.placeFn(b).localeCompare(accessors.placeFn(a)),
+    status: (accessors) => (a, b) => accessors.statusRank(a) - accessors.statusRank(b),
+    count_desc: (accessors) => (a, b) => accessors.countFn(b) - accessors.countFn(a),
+    count_asc: (accessors) => (a, b) => accessors.countFn(a) - accessors.countFn(b),
+    rarity_asc: (accessors) => (a, b) => accessors.rarityFn(a) - accessors.rarityFn(b),
+    threat_desc: (accessors) => (a, b) => accessors.threatFn(b) - accessors.threatFn(a),
+  };
+
+  // Unknown counts sort last for "rarest first"; unknown status sorts last for "most threatened".
+  const taxonRarity = (taxon) => { const i = taxonInfo.get(taxon.id); return i && i.observations_count != null ? i.observations_count : 1e12; };
+  const taxonThreat = (taxon) => { const i = taxonInfo.get(taxon.id); return i && i.iucn != null ? i.iucn : -1; };
+  const NOTABLE_EXTRA_SORT_OPTIONS = [
+    { value: 'rarity_asc', label: 'Rarest first (fewest worldwide)' },
+    { value: 'threat_desc', label: 'Most threatened first (IUCN)' },
+  ];
+
+  // Sorts, clamps the current page into range, and slices out just that page — shared by every
+  // listing tab so "page 2 of the county list" and "page 2 of lifers" behave identically.
+  function paginateAndSort(items, controls, accessors) {
+    const sorted = [...items].sort(SORT_COMPARATORS[controls.sort](accessors));
+    const totalCount = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / controls.pageSize));
+    controls.page = Math.min(Math.max(1, controls.page), totalPages);
+    const start = (controls.page - 1) * controls.pageSize;
+    return { pageItems: sorted.slice(start, start + controls.pageSize), totalPages, totalCount };
+  }
+
+  // ns namespaces the data attributes ('user' vs 'place') so the two modes' controls never
+  // collide — both have a tab literally called "notable", but they belong to separate state
+  // objects (state.listControls vs placeState.listControls) and must be routed independently.
+  function listControlsHtml(ns, tabKey, sortOptions, controls) {
+    return `
+      <div class="list-controls">
+        <label>Sort by
+          <select data-${ns}-sort-tab="${tabKey}">
+            ${sortOptions.map((o) => `<option value="${o.value}"${controls.sort === o.value ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+          </select>
+        </label>
+        <label>Per page
+          <select data-${ns}-pagesize-tab="${tabKey}">
+            ${[10, 25, 50, 100].map((n) => `<option value="${n}"${controls.pageSize === n ? ' selected' : ''}>${n}</option>`).join('')}
+          </select>
+        </label>
+      </div>`;
+  }
+
+  function paginationHtml(ns, tabKey, totalPages, totalCount, controls) {
+    return `
+      <div class="pagination">
+        <span class="page-summary">${totalCount} result${totalCount === 1 ? '' : 's'}</span>
+        <div class="page-nav">
+          <button class="secondary" data-${ns}-page-tab="${tabKey}" data-page-dir="prev"${controls.page <= 1 ? ' disabled' : ''}>Prev</button>
+          <span class="page-info">Page ${controls.page} of ${totalPages}</span>
+          <button class="secondary" data-${ns}-page-tab="${tabKey}" data-page-dir="next"${controls.page >= totalPages ? ' disabled' : ''}>Next</button>
+        </div>
+      </div>`;
+  }
+
+  const NAME_DATE_SORT_OPTIONS = [
+    { value: 'date_desc', label: 'Date (newest first)' },
+    { value: 'date_asc', label: 'Date (oldest first)' },
+    { value: 'name_asc', label: 'Name (A–Z)' },
+    { value: 'name_desc', label: 'Name (Z–A)' },
+  ];
+
+  function renderLifers() {
+    const filterText = el('filterInput').value;
+    const controls = state.listControls.lifers;
+    const filtered = state.lifers.filter((o) => matchesFilter(o.taxon, filterText));
+    const { pageItems, totalPages, totalCount } = paginateAndSort(filtered, controls, {
+      dateFn: (o) => o.observed_on,
+      nameFn: (o) => taxonName(o.taxon).toLowerCase(),
+    });
+    const container = el('tab-lifers');
+    const controlsHtml = listControlsHtml('user', 'lifers', NAME_DATE_SORT_OPTIONS, controls);
+    if (!totalCount) {
+      container.innerHTML = controlsHtml + '<div class="empty-msg">No new species found.</div>';
+      return;
+    }
+    container.innerHTML = controlsHtml +
+      `<div class="card-list">${pageItems.map((o) => obsCardHtml(o, [{ text: 'Lifer' }])).join('')}</div>` +
+      paginationHtml('user', 'lifers', totalPages, totalCount, controls);
+  }
+
+  const PLACE_FIRST_SORT_OPTIONS = [
+    ...NAME_DATE_SORT_OPTIONS,
+    { value: 'place_asc', label: 'Place (A–Z)' },
+    { value: 'place_desc', label: 'Place (Z–A)' },
+  ];
+
+  const PLACE_FIRST_TAB_LABELS = { country: 'Country Firsts', state: 'State Firsts', county: 'County / Parish Firsts', world: 'World Firsts' };
+
+  function placeFirstStatus(e) {
+    const r = state.verifyResults[verifyKey(e.obs.id, e.place.id, e.obs.taxon.id)];
+    return r ? r.status : 'pending';
+  }
+
+  // A candidate (the user's earliest sighting of a species in a given country/state/county) is
+  // only listed once the background check confirms it is the earliest verifiable record of that
+  // species in that place by ANY observer — i.e. a true first for the place, not merely the first
+  // time this user saw it there.
+  function renderPlaceFirsts(level) {
+    const filterText = el('filterInput').value;
+    const controls = state.listControls[level];
+    const candidates = state.placeFirsts[level];
+    let pending = 0, failed = 0;
+    const confirmed = [];
+    for (const e of candidates) {
+      const s = placeFirstStatus(e);
+      if (s === 'confirmed') confirmed.push(e);
+      else if (s === 'pending') pending++;
+      else if (s === 'error') failed++;
+    }
+    const tabBtn = document.querySelector(`.tab-btn[data-tab="${level}"]`);
+    if (tabBtn) tabBtn.textContent = `${PLACE_FIRST_TAB_LABELS[level]} (${confirmed.length}${pending ? '+' : ''})`;
+
+    const filtered = confirmed.filter((e) => matchesFilter(e.obs.taxon, filterText));
+    const { pageItems, totalPages, totalCount } = paginateAndSort(filtered, controls, {
+      dateFn: (e) => e.obs.observed_on,
+      nameFn: (e) => taxonName(e.obs.taxon).toLowerCase(),
+      placeFn: (e) => e.place.name.toLowerCase(),
+    });
+    const container = el(`tab-${level}`);
+    const controlsHtml = listControlsHtml('user', level, PLACE_FIRST_SORT_OPTIONS, controls);
+    const notes = [];
+    const isWorld = level === 'world';
+    const what = isWorld ? 'species' : `${level} sightings`;
+    if (pending) notes.push(`${pending} more of this user's ${what} are still being checked against everyone's records — confirmed firsts appear here as they're verified.`);
+    if (failed) notes.push(`${failed} could not be checked (API error); they'll be retried the next time you load this user.`);
+    const noteHtml = notes.length ? `<div class="status-line">${escapeHtml(notes.join(' '))}</div>` : '';
+    if (!totalCount) {
+      const msg = pending
+        ? `No confirmed ${isWorld ? 'world' : level} firsts yet — still checking.`
+        : isWorld
+          ? 'No world firsts: none of this user\'s sightings were the first iNaturalist record of that species anywhere.'
+          : `No ${level} firsts: none of this user's sightings were the first record of that species in their ${level}.`;
+      container.innerHTML = controlsHtml + noteHtml + `<div class="empty-msg">${escapeHtml(msg)}</div>`;
+      return;
+    }
+    container.innerHTML = controlsHtml + noteHtml +
+      `<div class="card-list">${pageItems.map((e) => obsCardHtml(e.obs, isWorld ? [] : [{ text: e.place.name }], verifyKey(e.obs.id, e.place.id, e.obs.taxon.id))).join('')}</div>` +
+      paginationHtml('user', level, totalPages, totalCount, controls);
+  }
+
+  // Our own "notable" definition is threatened OR obscured, but iNaturalist's own search page
+  // ANDs its filter params together, so there's no single threatened=true&geoprivacy=obscured
+  // link that matches our criteria. Instead we hand it the exact deduped taxon id set we already
+  // computed — taxon_id accepts a comma list as an OR/IN filter (verified against the live API:
+  // taxon_id=A,B returned exactly count(A)+count(B)) — so the link returns precisely every
+  // observation of these species, including the repeat sightings this tab collapses into one card.
+  function notableSearchUrl(entries, username) {
+    const taxonIds = [...new Set(entries.map((n) => n.obs.taxon.id))];
+    const params = new URLSearchParams({ user_id: username, taxon_id: taxonIds.join(','), verifiable: 'any' });
+    return `https://www.inaturalist.org/observations?${params.toString()}`;
+  }
+
+  function renderNotable() {
+    const filterText = el('filterInput').value;
+    const controls = state.listControls.notable;
+    const filtered = userNotableList().filter((n) => matchesFilter(n.obs.taxon, filterText));
+    const { pageItems, totalPages, totalCount } = paginateAndSort(filtered, controls, {
+      dateFn: (n) => n.obs.observed_on,
+      nameFn: (n) => taxonName(n.obs.taxon).toLowerCase(),
+      rarityFn: (n) => taxonRarity(n.obs.taxon),
+      threatFn: (n) => taxonThreat(n.obs.taxon),
+    });
+    const container = el('tab-notable');
+    const controlsHtml = notableControlsHtml('user') +
+      listControlsHtml('user', 'notable', [...NAME_DATE_SORT_OPTIONS, ...NOTABLE_EXTRA_SORT_OPTIONS], controls) +
+      enrichNoteHtml('user');
+    if (!totalCount) {
+      container.innerHTML = controlsHtml + '<div class="empty-msg">No notable finds match this view.</div>';
+      return;
+    }
+    const linkLabel = filterText ? 'View all matching notable finds on iNaturalist' : 'View all notable finds on iNaturalist';
+    const linkHtml = filtered.length <= 300
+      ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(notableSearchUrl(filtered, state.currentUsername))}" target="_blank" rel="noopener">${linkLabel} (every sighting, not just one per species) ↗</a></div>`
+      : '';
+    container.innerHTML = controlsHtml + linkHtml +
+      `<div class="card-list">${pageItems.map((n) => obsCardHtml(n.obs, n.reasons)).join('')}</div>` +
+      paginationHtml('user', 'notable', totalPages, totalCount, controls);
+  }
+
+  function renderAll() {
+    renderStats();
+    renderLifers();
+    renderPlaceFirsts('country');
+    renderPlaceFirsts('state');
+    renderPlaceFirsts('county');
+    renderPlaceFirsts('world');
+    renderNotable();
+  }
+
+  // ---------- place-mode rendering ----------
+
+  const SPECIES_SORT_OPTIONS = [
+    { value: 'count_desc', label: 'Observations (most first)' },
+    { value: 'count_asc', label: 'Observations (fewest first)' },
+    { value: 'name_asc', label: 'Name (A–Z)' },
+    { value: 'name_desc', label: 'Name (Z–A)' },
+  ];
+
+  function recordVerdictBadge(key) {
+    const r = placeState.recordResults[key];
+    if (!r || r.status === 'pending') return { text: 'Checking…', cls: 'pending' };
+    if (r.status === 'done') {
+      if (!r.obsId) return { text: 'No verifiable records found', cls: 'not-first' };
+      return { text: `First found by ${r.user || 'an unknown observer'} on ${r.date || 'an unknown date'}`, cls: 'confirmed' };
+    }
+    return { text: 'Lookup failed', cls: 'error' };
+  }
+
+  function speciesCardHtml(entry, badges, recordKeyAttr) {
+    const t = entry.taxon;
+    if (!t) return '';
+    const img = photoUrl(t);
+    const common = taxonName(t);
+    const showSci = common !== t.name;
+    const place = placeState.currentPlace;
+    const allBadges = [...(badges || [])];
+    if (recordKeyAttr) {
+      const v = recordVerdictBadge(recordKeyAttr);
+      allBadges.push({ text: v.text, cls: v.cls, verify: true });
+    }
+    const href = `https://www.inaturalist.org/observations?place_id=${place ? place.id : ''}&taxon_id=${t.id}&verifiable=any`;
+    return `
+      <a class="obs-card" href="${href}" target="_blank" rel="noopener"${recordKeyAttr ? ` data-record-key="${recordKeyAttr}"` : ''}>
+        ${img ? `<img class="obs-thumb" src="${img}" alt="">` : `<div class="obs-thumb"></div>`}
+        <div class="obs-info">
+          <div class="obs-name">${escapeHtml(common)}${showSci ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
+          <div class="obs-meta">${entry.count} observation${entry.count === 1 ? '' : 's'} in ${escapeHtml(place ? place.name : '')}</div>
+          ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-record-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}
+        </div>
+      </a>`;
+  }
+
+  function placeStatsList() {
+    return [
+      { label: 'Total Observations', num: placeState.totalObservations },
+      { label: 'Species Recorded', num: placeState.speciesList.length },
+      { label: 'Notable Species', num: placeNotableList().length },
+    ];
+  }
+
+  function renderPlaceStats() {
+    const stats = placeStatsList();
+    el('placeStatGrid').innerHTML = stats.map((s) => `<div class="stat-card"><div class="num">${s.num}</div><div class="label">${s.label}</div></div>`).join('');
+  }
+
+  function renderPlaceSpecies() {
+    const filterText = el('placeFilterInput').value;
+    const controls = placeState.listControls.species;
+    const filtered = placeState.speciesList.filter((e) => matchesFilter(e.taxon, filterText));
+    const { pageItems, totalPages, totalCount } = paginateAndSort(filtered, controls, {
+      nameFn: (e) => taxonName(e.taxon).toLowerCase(),
+      countFn: (e) => e.count,
+    });
+    const container = el('tab-place-species');
+    const controlsHtml = listControlsHtml('place', 'species', SPECIES_SORT_OPTIONS, controls);
+    if (!totalCount) {
+      container.innerHTML = controlsHtml + '<div class="empty-msg">No species found.</div>';
+      return;
+    }
+    container.innerHTML = controlsHtml +
+      `<div class="card-list">${pageItems.map((e) => speciesCardHtml(e)).join('')}</div>` +
+      paginationHtml('place', 'species', totalPages, totalCount, controls);
+  }
+
+  function placeNotableSearchUrl(entries) {
+    const taxonIds = [...new Set(entries.map((n) => n.taxonId))];
+    const params = new URLSearchParams({ place_id: placeState.currentPlace.id, taxon_id: taxonIds.join(','), verifiable: 'any' });
+    return `https://www.inaturalist.org/observations?${params.toString()}`;
+  }
+
+  function renderPlaceNotable() {
+    const filterText = el('placeFilterInput').value;
+    const controls = placeState.listControls.notable;
+    const filtered = placeNotableList().filter((n) => matchesFilter(n.taxon, filterText));
+    const { pageItems, totalPages, totalCount } = paginateAndSort(filtered, controls, {
+      nameFn: (n) => taxonName(n.taxon).toLowerCase(),
+      countFn: (n) => n.count,
+      rarityFn: (n) => taxonRarity(n.taxon),
+      threatFn: (n) => taxonThreat(n.taxon),
+    });
+    const container = el('tab-place-notable');
+    const controlsHtml = notableControlsHtml('place') +
+      listControlsHtml('place', 'notable', [...SPECIES_SORT_OPTIONS, ...NOTABLE_EXTRA_SORT_OPTIONS], controls) +
+      enrichNoteHtml('place');
+    if (!totalCount) {
+      container.innerHTML = controlsHtml + '<div class="empty-msg">No notable species in this place match this view.</div>';
+      return;
+    }
+    const linkLabel = filterText ? 'View all matching notable finds on iNaturalist' : 'View all notable finds on iNaturalist';
+    const linkHtml = filtered.length <= 300
+      ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(placeNotableSearchUrl(filtered))}" target="_blank" rel="noopener">${linkLabel} ↗</a></div>`
+      : '';
+    container.innerHTML = controlsHtml + linkHtml +
+      `<div class="card-list">${pageItems.map((n) => speciesCardHtml(n, n.reasons)).join('')}</div>` +
+      paginationHtml('place', 'notable', totalPages, totalCount, controls);
+  }
+
+  function renderPlaceRecords() {
+    const filterText = el('placeFilterInput').value;
+    const controls = placeState.listControls.records;
+    const filtered = placeState.speciesList.filter((e) => matchesFilter(e.taxon, filterText));
+    const { pageItems, totalPages, totalCount } = paginateAndSort(filtered, controls, {
+      nameFn: (e) => taxonName(e.taxon).toLowerCase(),
+      countFn: (e) => e.count,
+    });
+    const container = el('tab-place-records');
+    const controlsHtml = listControlsHtml('place', 'records', SPECIES_SORT_OPTIONS, controls);
+    if (!totalCount) {
+      container.innerHTML = controlsHtml + '<div class="empty-msg">No species found.</div>';
+      return;
+    }
+    container.innerHTML = controlsHtml +
+      `<div class="card-list">${pageItems.map((e) => speciesCardHtml(e, null, placeRecordKey(placeState.currentPlace.id, e.taxonId))).join('')}</div>` +
+      paginationHtml('place', 'records', totalPages, totalCount, controls);
+    verifyVisiblePlaceRecords(pageItems);
+  }
+
+  function renderPlaceAll() {
+    renderPlaceStats();
+    renderPlaceSpecies();
+    renderPlaceNotable();
+    renderPlaceRecords();
+  }
+
+  function applyRecordVerdictToDOM(key) {
+    const card = document.querySelector(`[data-record-key="${CSS.escape(key)}"]`);
+    if (!card) return; // not currently visible — will be correct whenever it renders
+    const badgeEl = card.querySelector('[data-record-badge]');
+    if (!badgeEl) return;
+    const v = recordVerdictBadge(key);
+    badgeEl.textContent = v.text;
+    badgeEl.className = `badge ${v.cls}`;
+  }
+
+  // Unlike user-mode place-firsts (a small, naturally-bounded list that gets fully verified in
+  // the background right after load), a place's species list can run into the thousands — so
+  // "who found it first" is instead resolved lazily, one page at a time, only for whichever
+  // species the Species Records tab is currently showing. Results are still cached permanently,
+  // so paging back to an already-seen page never re-hits the API.
+  async function verifyVisiblePlaceRecords(pageItems) {
+    const myGen = currentPlaceGeneration;
+    const isCancelled = placeGenCheck(myGen);
+    const db = await dbPromise;
+    const placeId = placeState.currentPlace.id;
+    const toFetch = [];
+    for (const entry of pageItems) {
+      const key = placeRecordKey(placeId, entry.taxonId);
+      if (placeState.recordResults[key]) continue;
+      placeState.recordResults[key] = { key, placeId, status: 'pending' };
+      toFetch.push({ entry, key });
+    }
+    if (!toFetch.length) return;
+    for (const { entry, key } of toFetch) {
+      if (isCancelled()) return;
+      let record;
+      try {
+        const url = `${API_BASE}/observations?place_id=${placeId}&taxon_id=${entry.taxonId}&order_by=observed_on&order=asc&per_page=1&verifiable=true`;
+        const data = await throttledFetch(url, isCancelled);
+        const earliest = data.results && data.results[0];
+        record = earliest
+          ? { key, placeId, status: 'done', obsId: earliest.id, user: earliest.user && earliest.user.login, date: earliest.observed_on, checkedAt: Date.now() }
+          : { key, placeId, status: 'done', obsId: null, checkedAt: Date.now() };
+      } catch (e) {
+        if (isCancelled()) return;
+        record = { key, placeId, status: 'error', checkedAt: Date.now() };
+      }
+      placeState.recordResults[key] = record;
+      idbPut(db, 'place_records', record);
+      applyRecordVerdictToDOM(key);
+    }
+  }
+
+  // ---------- automatic background verification ----------
+
+  function allPlaceFirstCandidates() {
+    const combined = [];
+    for (const level of FIRST_LEVELS) {
+      for (const e of state.placeFirsts[level]) combined.push({ ...e, level });
+    }
+    return combined;
+  }
+
+  // Firsts tabs only list confirmed entries, so new verdicts change which cards exist; batch the
+  // re-renders so a fast stream of verdicts doesn't rebuild the list on every single one.
+  const firstsRerenderLevels = new Set();
+  let firstsRerenderTimer = null;
+  function scheduleFirstsRerender(level) {
+    firstsRerenderLevels.add(level);
+    if (firstsRerenderTimer) return;
+    firstsRerenderTimer = setTimeout(() => {
+      firstsRerenderTimer = null;
+      const levels = [...firstsRerenderLevels];
+      firstsRerenderLevels.clear();
+      for (const lv of levels) renderPlaceFirsts(lv);
+    }, 1000);
+  }
+  function rerenderFirstsTabs() {
+    clearTimeout(firstsRerenderTimer);
+    firstsRerenderTimer = null;
+    firstsRerenderLevels.clear();
+    for (const lv of FIRST_LEVELS) renderPlaceFirsts(lv);
+  }
+
+  // Notable lists depend on the worldwide species lookup, which streams in; batch re-renders.
+  const notableRerenderTimers = {};
+  function scheduleNotableRerender(mode) {
+    if (notableRerenderTimers[mode]) return;
+    notableRerenderTimers[mode] = setTimeout(() => {
+      notableRerenderTimers[mode] = null;
+      if (mode === 'user') { renderNotable(); renderStats(); } else { renderPlaceNotable(); renderPlaceStats(); }
+    }, 1000);
+  }
+
+  async function startAutoVerification(myGen) {
+    const db = await dbPromise;
+    const cachedVerifications = await idbGetAll(db, 'verifications');
+    const verMap = new Map(cachedVerifications.map((v) => [v.key, v]));
+
+    const candidates = allPlaceFirstCandidates();
+    const queue = [];
+    let confirmed = 0, done = 0;
+    for (const c of candidates) {
+      const key = verifyKey(c.obs.id, c.place.id, c.obs.taxon.id);
+      const cached = verMap.get(key);
+      if (cached && cached.status && cached.status !== 'pending' && cached.status !== 'error') {
+        state.verifyResults[key] = cached;
+        done++;
+        if (cached.status === 'confirmed') confirmed++;
+      } else {
+        state.verifyResults[key] = { key, status: 'pending' };
+        queue.push({ ...c, key });
+      }
+    }
+    state.verifyProgress = { done, total: candidates.length, confirmed };
+    renderStats();
+    rerenderFirstsTabs(); // cached verdicts are known now, so confirmed firsts can show immediately
+
+    if (myGen !== currentGeneration) return;
+
+    if (!queue.length) {
+      setVerifyStatusLine(candidates.length ? `All ${candidates.length} place-firsts already verified — ${confirmed} confirmed as true firsts.` : '');
+      return;
+    }
+
+    const isCancelled = userGenCheck(myGen);
+    const stale = () => myGen !== currentGeneration;
+
+    // One place builds the progress line. Step 1 settles many sightings per request but leaves the
+    // likely firsts for step 2, so it reports "screened" (settled + passed on) rather than only
+    // settled, which would sit still whenever a whole batch passes. A 1-second tick keeps it
+    // current through rate-limit pauses too.
+    const prog = { step: 1, screened: 0, req: 0, reqTotal: 0, singleIdx: 0, singleTotal: 0, note: '' };
+    const renderProgress = () => {
+      if (stale()) return;
+      const p = state.verifyProgress;
+      let text = prog.step === 1
+        ? `Verifying place records — step 1 of 2 (bulk screening): ${p.done + prog.screened}/${p.total} sightings screened, request ${Math.min(prog.req, prog.reqTotal)}/${prog.reqTotal}`
+        : `Verifying place records — step 2 of 2 (exact checks): ${p.done}/${p.total} checked, ${Math.min(prog.singleIdx, prog.singleTotal)}/${prog.singleTotal} individual lookups`;
+      text += ` · ${p.confirmed} confirmed so far`;
+      const waitS = Math.ceil((rateLimitedUntil - Date.now()) / 1000);
+      if (prog.note) text += ` · ${prog.note}`;
+      else if (waitS > 0) text += ` · iNaturalist is rate-limiting, resuming in ${waitS}s`;
+      setVerifyStatusLine(`${text}...`);
+    };
+    const ticker = setInterval(() => { if (stale()) clearInterval(ticker); else renderProgress(); }, 1000);
+
+    const saveVerdict = (c, record) => {
+      if (record.status === 'confirmed') state.verifyProgress.confirmed++;
+      state.verifyResults[c.key] = record;
+      idbPut(db, 'verifications', record);
+      state.verifyProgress.done++;
+      scheduleFirstsRerender(c.level);
+      renderProgress();
+      if (state.verifyProgress.done % 25 === 0) renderStats();
+    };
+    try {
+      await runVerificationPasses();
+    } finally {
+      clearInterval(ticker);
+    }
+    if (stale()) return;
+    renderStats();
+    rerenderFirstsTabs();
+    setVerifyStatusLine(`Done verifying ${state.verifyProgress.total} place-firsts — ${state.verifyProgress.confirmed} confirmed as true first records.`);
+
+    async function runVerificationPasses() {
+      const notFirst = (c, extra) => ({ key: c.key, status: 'not_first', level: c.level, checkedAt: Date.now(), ...extra });
+
+      // Pass 1 (bulk): group candidates by level, place and date, and ask once per group which of
+      // those species already had a verifiable record in that place BEFORE that date. Anything with
+      // an earlier record is definitely not a first. Sightings are clustered by outing, so this
+      // replaces dozens of per-species requests with one. (Casual-grade sightings can never be the
+      // earliest verifiable record, so they're settled without a request.)
+      const survivors = [];
+      const groups = new Map();
+      for (const c of queue) {
+        if (c.obs.quality_grade === 'casual') { saveVerdict(c, notFirst(c)); continue; }
+        if (!c.obs.observed_on) { survivors.push(c); prog.screened++; continue; }
+        const gk = `${c.level}|${c.place.id}|${c.obs.observed_on}`;
+        if (!groups.has(gk)) groups.set(gk, []);
+        groups.get(gk).push(c);
+      }
+      const batches = [];
+      for (const items of groups.values()) {
+        for (let i = 0; i < items.length; i += BULK_TAXA_PER_REQUEST) batches.push({ items: items.slice(i, i + BULK_TAXA_PER_REQUEST) });
+      }
+      prog.reqTotal = batches.length;
+      renderProgress();
+
+      // A request that fails (usually iNaturalist briefly rate-limiting us) is retried once at the
+      // end of its pass, after a pause so the API has time to recover.
+      let pausedForRetries = false;
+      const pauseBeforeRetries = async (n) => {
+        if (pausedForRetries) return;
+        pausedForRetries = true;
+        const until = Date.now() + 15000;
+        const tick = () => { prog.note = `pausing ${Math.max(0, Math.ceil((until - Date.now()) / 1000))}s, then retrying ${n} request${n === 1 ? '' : 's'} iNaturalist didn't answer`; };
+        tick();
+        renderProgress();
+        const t = setInterval(tick, 500);
+        await sleep(15000);
+        clearInterval(t);
+        prog.note = '';
+      };
+
+      for (let i = 0; i < batches.length; i++) {
+        const b = batches[i];
+        if (stale()) return;
+        if (b.retried) { await pauseBeforeRetries(batches.length - i); if (stale()) return; }
+        prog.req = i + 1;
+        renderProgress();
+        try {
+          const earlier = await countEarlierRecords(b.items, isCancelled);
+          if (stale()) return;
+          for (const c of b.items) {
+            if (earlier.get(c.obs.taxon.id) > 0) saveVerdict(c, notFirst(c));
+            else { survivors.push(c); prog.screened++; }
+          }
+        } catch (e) {
+          if (stale()) return;
+          if (!b.retried) { batches.push({ ...b, retried: true }); prog.reqTotal = batches.length; }
+          else for (const c of b.items) saveVerdict(c, { key: c.key, status: 'error', level: c.level, checkedAt: Date.now() });
+        }
+        renderProgress();
+      }
+      renderStats();
+
+      // Pass 2 (precise): the few left — usually real firsts, plus same-day ties with another
+      // observer — get the exact "earliest record of this species here" lookup.
+      pausedForRetries = false;
+      prog.step = 2;
+      prog.singleTotal = survivors.length;
+      renderProgress();
+      const singles = survivors;
+      for (let i = 0; i < singles.length; i++) {
+        const c = singles[i];
+        if (stale()) return;
+        if (c.retried) { await pauseBeforeRetries(singles.length - i); if (stale()) return; }
+        let record;
+        try {
+          const url = `${API_BASE}/observations?${c.level === 'world' ? '' : `place_id=${c.place.id}&`}taxon_id=${c.obs.taxon.id}&order_by=observed_on&order=asc&per_page=1&verifiable=true`;
+          const data = await throttledFetch(url, isCancelled);
+          const earliest = data.results && data.results[0];
+          record = earliest && earliest.id === c.obs.id
+            ? { key: c.key, status: 'confirmed', level: c.level, checkedAt: Date.now() }
+            : notFirst(c, {
+              earliestObsId: earliest && earliest.id,
+              earliestUser: earliest && earliest.user && earliest.user.login,
+              earliestDate: earliest && earliest.observed_on,
+            });
+        } catch (e) {
+          if (stale()) return;
+          if (!c.retried) { singles.push({ ...c, retried: true }); continue; }
+          record = { key: c.key, status: 'error', level: c.level, checkedAt: Date.now() };
+        }
+        prog.singleIdx++;
+        saveVerdict(c, record);
+      }
+    }
+  }
+
+  const BULK_TAXA_PER_REQUEST = 200; // keeps the request URL comfortably short
+
+  function dayBefore(isoDate) {
+    const d = new Date(`${isoDate}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // For candidates that share a level, place and date: how many verifiable observations of each
+  // species exist in that place dated before that day. species_counts reports leaf taxa, so each
+  // result is credited to every requested taxon in its ancestry (an earlier subspecies record is
+  // an earlier record of the species). It can only under-count, never over-count, so "> 0" safely
+  // means "not a first"; a 0 is double-checked precisely in pass 2.
+  async function countEarlierRecords(items, isCancelled) {
+    const c0 = items[0];
+    const ids = [...new Set(items.map((c) => c.obs.taxon.id))];
+    const wanted = new Set(ids);
+    const counts = new Map();
+    const placeParam = c0.level === 'world' ? '' : `place_id=${c0.place.id}&`;
+    for (let page = 1; ; page++) {
+      const url = `${API_BASE}/observations/species_counts?${placeParam}taxon_id=${ids.join(',')}&d2=${dayBefore(c0.obs.observed_on)}&verifiable=true&per_page=500&page=${page}`;
+      const data = await throttledFetch(url, isCancelled);
+      const results = data.results || [];
+      for (const r of results) {
+        const lineage = (r.taxon && r.taxon.ancestor_ids) || (r.taxon ? [r.taxon.id] : []);
+        for (const id of lineage) if (wanted.has(id)) counts.set(id, (counts.get(id) || 0) + r.count);
+      }
+      if (results.length < 500 || page * 500 >= (data.total_results || 0)) break;
+    }
+    return counts;
+  }
+
+  // ---------- exportable reports ----------
+  //
+  // A report is a snapshot of what's currently loaded for a user or a place, saved either as a
+  // standalone HTML page (opens in any browser, prints cleanly to PDF) or as a CSV spreadsheet.
+
+  const REPORT_LEVEL_TITLES = { world: 'World firsts', country: 'Country firsts', state: 'State / province firsts', county: 'County / parish firsts' };
+  const INAT = 'https://www.inaturalist.org';
+
+  function slugify(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'report';
+  }
+
+  function downloadFile(name, content, type) {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  function csvCell(v) {
+    const s = v == null ? '' : String(v);
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  const CSV_COLUMNS = ['section', 'common_name', 'scientific_name', 'taxon_id', 'date', 'place', 'observer', 'observations', 'details', 'url'];
+  function toCsv(rows) {
+    // Leading BOM so Excel opens accented species names correctly.
+    return '﻿' + [CSV_COLUMNS.join(','), ...rows.map((r) => CSV_COLUMNS.map((c) => csvCell(r[c])).join(','))].join('\r\n') + '\r\n';
+  }
+
+  const byDateDesc = (a, b) => (b.date || '').localeCompare(a.date || '');
+  const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
+
+  // One normalized row shape feeds both the HTML tables and the CSV.
+  function speciesRow(section, taxon, extra) {
+    const common = taxon.preferred_common_name || '';
+    return {
+      section,
+      name: taxonName(taxon),
+      common_name: common,
+      scientific_name: taxon.name,
+      taxon_id: taxon.id,
+      photo: photoUrl(taxon),
+      ...extra,
+    };
+  }
+
+  function userReportData() {
+    const sections = [];
+    const username = state.currentUsername;
+    for (const level of ['world', 'country', 'state', 'county']) {
+      const rows = [];
+      let pending = 0, failed = 0;
+      for (const e of state.placeFirsts[level]) {
+        const s = placeFirstStatus(e);
+        if (s === 'pending') pending++;
+        else if (s === 'error') failed++;
+        if (s !== 'confirmed') continue;
+        rows.push(speciesRow(REPORT_LEVEL_TITLES[level], e.obs.taxon, {
+          date: e.obs.observed_on || '',
+          place: level === 'world' ? (e.obs.place_guess || '') : e.place.name,
+          observer: username,
+          details: level === 'world' ? 'First iNaturalist record of this species anywhere' : `First record of this species in ${e.place.name}`,
+          url: `${INAT}/observations/${e.obs.id}`,
+        }));
+      }
+      rows.sort(byDateDesc);
+      const notes = [];
+      if (pending) notes.push(`${pending} sighting${pending === 1 ? ' was' : 's were'} still being checked when this report was made.`);
+      if (failed) notes.push(`${failed} could not be checked.`);
+      sections.push({ title: REPORT_LEVEL_TITLES[level], kind: 'obs', rows, notes, empty: 'None confirmed.' });
+    }
+
+    const notableRows = [];
+    for (const c of state.notable) {
+      const reasons = taxonNotableReasons(c.obs.taxon, c.obscured);
+      if (!reasons.length) continue;
+      notableRows.push(speciesRow('Notable finds', c.obs.taxon, {
+        date: c.obs.observed_on || '',
+        place: c.obs.place_guess || '',
+        observer: username,
+        details: reasons.map((r) => r.text).join('; '),
+        url: `${INAT}/observations/${c.obs.id}`,
+      }));
+    }
+    notableRows.sort(byDateDesc);
+    const p = taxonEnrich.user;
+    sections.push({
+      title: 'Notable finds',
+      kind: 'obs',
+      rows: notableRows,
+      notes: [`"Rare" means fewer than ${notableSettings.rareThreshold.toLocaleString()} observations worldwide on iNaturalist.`]
+        .concat(p.running ? [`Worldwide species lookups were still running (${p.done}/${p.total}), so some rare or endangered species may be missing.`] : []),
+      empty: 'No notable finds.',
+    });
+
+    const liferRow = (title) => (o) => speciesRow(title, o.taxon, {
+      date: o.observed_on || '',
+      place: o.place_guess || '',
+      observer: username,
+      details: 'First time this user observed the species',
+      url: `${INAT}/observations/${o.id}`,
+    });
+    const recentRows = recentLifers().map(liferRow('New species, last 12 months')).sort(byDateDesc);
+    sections.push({
+      title: 'New species, last 12 months',
+      kind: 'obs',
+      rows: recentRows,
+      notes: [`Species ${username} saw for the first time since ${oneYearAgoIso()}.`],
+      empty: 'No new species in the last 12 months.',
+    });
+    const liferRows = state.lifers.map(liferRow('Life list')).sort(byDateDesc);
+    sections.push({ title: 'Life list (first sighting of each species)', kind: 'obs', rows: liferRows, notes: [], empty: 'None.', collapsed: true, noPhotos: true });
+
+    return {
+      title: `iNaturalist highlights: ${username}`,
+      subtitle: `Observer report for ${username}`,
+      link: { href: `${INAT}/people/${encodeURIComponent(username)}`, text: `${username} on iNaturalist` },
+      stats: userStatsList(),
+      sections,
+      fileBase: `inat-report-${slugify(username)}`,
+    };
+  }
+
+  function placeReportData() {
+    const place = placeState.currentPlace;
+    const placeName = place.display_name || place.name;
+    const sections = [];
+    const speciesUrl = (taxonId) => `${INAT}/observations?place_id=${place.id}&taxon_id=${taxonId}&verifiable=any`;
+
+    const notableRows = [];
+    for (const e of placeState.speciesList) {
+      const reasons = taxonNotableReasons(e.taxon, false);
+      if (!reasons.length) continue;
+      notableRows.push(speciesRow('Notable species', e.taxon, {
+        place: placeName, observations: e.count, details: reasons.map((r) => r.text).join('; '), url: speciesUrl(e.taxonId),
+      }));
+    }
+    notableRows.sort(byName);
+    const p = taxonEnrich.place;
+    sections.push({
+      title: 'Notable species',
+      kind: 'species',
+      rows: notableRows,
+      notes: [`"Rare" means fewer than ${notableSettings.rareThreshold.toLocaleString()} observations worldwide on iNaturalist.`]
+        .concat(p.running ? [`Worldwide species lookups were still running (${p.done}/${p.total}), so some rare or endangered species may be missing.`] : []),
+      empty: 'No notable species.',
+    });
+
+    const recordRows = [];
+    for (const e of placeState.speciesList) {
+      const r = placeState.recordResults[placeRecordKey(place.id, e.taxonId)];
+      if (!r || r.status !== 'done' || !r.obsId) continue;
+      recordRows.push(speciesRow('First found', e.taxon, {
+        date: r.date || '', place: placeName, observer: r.user || '', observations: e.count,
+        details: 'Earliest verifiable record in this place', url: `${INAT}/observations/${r.obsId}`,
+      }));
+    }
+    recordRows.sort(byDateDesc);
+    sections.push({
+      title: 'Who found each species first',
+      kind: 'record',
+      rows: recordRows,
+      notes: [`Covers the ${recordRows.length.toLocaleString()} of ${placeState.speciesList.length.toLocaleString()} species looked up so far (they're looked up as you page through the Species Records tab).`],
+      empty: 'No species looked up yet.',
+    });
+
+    const allRows = placeState.speciesList.map((e) => speciesRow('Species list', e.taxon, {
+      place: placeName, observations: e.count, url: speciesUrl(e.taxonId),
+    })).sort((a, b) => (b.observations || 0) - (a.observations || 0));
+    sections.push({ title: 'Full species list', kind: 'species', rows: allRows, notes: [], empty: 'None.', collapsed: true, noPhotos: true });
+
+    return {
+      title: `iNaturalist highlights: ${placeName}`,
+      subtitle: `Place report for ${placeName}`,
+      link: { href: `${INAT}/places/${place.id}`, text: `${place.name} on iNaturalist` },
+      stats: placeStatsList(),
+      sections,
+      fileBase: `inat-report-${slugify(place.name)}`,
+    };
+  }
+
+  function reportTableHtml(section, forPdf) {
+    const showPhoto = !section.noPhotos;
+    const cols = section.kind === 'obs'
+      ? [['Species'], ['Date'], ['Place'], ['Details']]
+      : section.kind === 'record'
+        ? [['Species'], ['First found by'], ['Date'], ['Obs. here', 'num']]
+        : section.title === 'Full species list' ? [['Species'], ['Obs. here', 'num']] : [['Species'], ['Obs. here', 'num'], ['Why notable']];
+    const speciesCell = (r) => `
+      <td class="sp">${showPhoto ? (r.photo ? `<img src="${escapeHtml(r.photo)}" alt=""${forPdf ? '' : ' loading="lazy"'}>` : '<span class="ph"></span>') : ''}
+        <span><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a>${r.common_name ? `<br><i>${escapeHtml(r.scientific_name)}</i>` : ''}</span></td>`;
+    const cells = (r) => {
+      if (section.kind === 'obs') return `${speciesCell(r)}<td class="nowrap">${escapeHtml(r.date || '—')}</td><td>${escapeHtml(r.place || '')}</td><td>${escapeHtml(r.details || '')}</td>`;
+      if (section.kind === 'record') return `${speciesCell(r)}<td>${escapeHtml(r.observer || '')}</td><td class="nowrap">${escapeHtml(r.date || '—')}</td><td class="num">${(r.observations || 0).toLocaleString()}</td>`;
+      if (cols.length === 2) return `${speciesCell(r)}<td class="num">${(r.observations || 0).toLocaleString()}</td>`;
+      return `${speciesCell(r)}<td class="num">${(r.observations || 0).toLocaleString()}</td><td>${escapeHtml(r.details || '')}</td>`;
+    };
+    const table = section.rows.length
+      ? `<div class="table-wrap"><table>
+          <thead><tr>${cols.map(([c, cls]) => `<th${cls ? ` class="${cls}"` : ''}>${c}</th>`).join('')}</tr></thead>
+          <tbody>${section.rows.map((r) => `<tr>${cells(r)}</tr>`).join('')}</tbody>
+        </table></div>`
+      : `<p class="empty">${escapeHtml(section.empty)}</p>`;
+    const notes = section.notes.length ? `<p class="note">${escapeHtml(section.notes.join(' '))}</p>` : '';
+    const heading = `${escapeHtml(section.title)} <span class="count">${section.rows.length.toLocaleString()}</span>`;
+    return section.collapsed
+      ? `<section${section.noPhotos ? ' class="compact"' : ''}><details${forPdf ? ' open' : ''}><summary><h2>${heading}</h2></summary>${notes}${table}</details></section>`
+      : `<section><h2>${heading}</h2>${notes}${table}</section>`;
+  }
+
+  // forPdf: a print-ready copy (photos load straight away, every section expanded, title used as
+  // the suggested PDF file name).
+  function reportHtml(data, forPdf = false, pdfTitle = '') {
+    const generated = new Date();
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(forPdf && pdfTitle ? pdfTitle : data.title)}</title>
+<style>
+  :root { --bg:#ffffff; --text:#1d2418; --muted:#5f6b58; --border:#dfe5d8; --accent:#2e7d4f; --soft:#f3f6ef; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14170f; --text:#e8ede2; --muted:#9aa693; --border:#2c3327; --accent:#4fd18a; --soft:#1c2117; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  .meta { color: var(--muted); font-size: .9rem; margin: 0 0 20px; }
+  a { color: var(--accent); }
+  .stats { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-bottom: 24px; }
+  .stat { border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:var(--soft); }
+  .stat .n { font-size:1.4rem; font-weight:700; }
+  .stat .l { font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+  section { margin: 26px 0; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; display:inline; }
+  section > h2 { display:block; }
+  summary { cursor:pointer; margin-bottom: 8px; }
+  .count { color: var(--muted); font-weight: 400; font-size: .95rem; }
+  .note, .empty { color: var(--muted); font-size: .88rem; margin: 4px 0 10px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse: collapse; font-size: .88rem; }
+  th, td { text-align:left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); }
+  td.num, th.num { text-align:right; }
+  td.nowrap { white-space: nowrap; }
+  td.sp { display:flex; gap:10px; align-items:flex-start; min-width: 200px; }
+  td.sp img, td.sp .ph { width:40px; height:40px; border-radius:6px; object-fit:cover; flex:none; background:var(--soft); }
+  td.sp i { color: var(--muted); }
+  footer { color: var(--muted); font-size: .8rem; margin-top: 32px; }
+  @page { margin: 14mm 12mm; }
+  @media print {
+    :root { --bg:#fff; --text:#000; --muted:#555; --border:#ccc; --accent:#1a5c36; --soft:#f4f4f4; }
+    body { font-size: 11pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    main { max-width:none; padding: 0; }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    .table-wrap { overflow: visible; }
+    thead { display: table-header-group; } /* repeat column headings on every page */
+    tr { break-inside: avoid; }
+    h2 { break-after: avoid; }
+    .stats { grid-template-columns: repeat(4, 1fr); break-inside: avoid; }
+    section.compact table { font-size: 8.5pt; }
+    section.compact th, section.compact td { padding: 3px 6px; }
+    a { text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>${escapeHtml(data.subtitle)}</h1>
+  <p class="meta">Generated ${escapeHtml(generated.toLocaleString())} · <a href="${escapeHtml(data.link.href)}">${escapeHtml(data.link.text)}</a></p>
+  <div class="stats">${data.stats.map((s) => `<div class="stat"><div class="n">${Number(s.num || 0).toLocaleString()}</div><div class="l">${escapeHtml(s.label)}</div></div>`).join('')}</div>
+  ${data.sections.map((sec) => reportTableHtml(sec, forPdf)).join('\n')}
+  <footer>Made with iNaturalist Highlights from public iNaturalist data. "Firsts" are checked against every observer's verifiable records.</footer>
+</main>
+<script>
+  // Expand collapsed sections when printing so the whole report reaches the PDF.
+  window.addEventListener('beforeprint', () => document.querySelectorAll('details').forEach((d) => { d.dataset.wasOpen = d.open; d.open = true; }));
+  window.addEventListener('afterprint', () => document.querySelectorAll('details').forEach((d) => { d.open = d.dataset.wasOpen === 'true'; }));
+<\/script>
+</body>
+</html>
+`;
+  }
+
+  function reportCsv(data) {
+    const rows = [];
+    for (const s of data.sections) for (const r of s.rows) rows.push({ ...r, section: s.title });
+    return toCsv(rows);
+  }
+
+  // PDF goes through the browser's own "Save as PDF" print destination: it keeps photos, links and
+  // any script (Japanese, Cyrillic, accents) exactly as the HTML report shows them, without
+  // bundling a PDF library and fonts. The report is laid out in a hidden frame, its photos are
+  // given a few seconds to load, then the print dialog opens with the file name pre-filled.
+  let pdfFrame = null;
+  async function saveReportAsPdf(data, fileName) {
+    if (pdfFrame) pdfFrame.remove();
+    const frame = document.createElement('iframe');
+    pdfFrame = frame;
+    frame.setAttribute('aria-hidden', 'true');
+    frame.tabIndex = -1;
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument;
+    doc.open();
+    doc.write(reportHtml(data, true, fileName));
+    doc.close();
+    const pending = [...doc.images].filter((img) => !img.complete)
+      .map((img) => new Promise((resolve) => { img.addEventListener('load', resolve); img.addEventListener('error', resolve); }));
+    await Promise.race([Promise.all(pending), sleep(10000)]);
+    if (pdfFrame !== frame) return; // a newer export replaced this one
+    // Chrome and Edge name the PDF after the top page's title when printing a frame.
+    const pageTitle = document.title;
+    document.title = fileName;
+    const cleanUp = () => { document.title = pageTitle; };
+    frame.contentWindow.addEventListener('afterprint', cleanUp, { once: true });
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+    setTimeout(cleanUp, 1000); // print() returns once the dialog closes in Chrome/Edge; afterprint covers the rest
+  }
+
+  async function exportReport(mode, format) {
+    const data = mode === 'user' ? userReportData() : placeReportData();
+    const day = new Date().toISOString().slice(0, 10);
+    if (format === 'csv') downloadFile(`${data.fileBase}-${day}.csv`, reportCsv(data), 'text/csv;charset=utf-8');
+    else if (format === 'pdf') await saveReportAsPdf(data, `${data.fileBase}-${day}`);
+    else downloadFile(`${data.fileBase}-${day}.html`, reportHtml(data), 'text/html;charset=utf-8');
+    return data;
+  }
+
+  // ---------- event wiring ----------
+
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      el(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+
+  function rerenderTab(tab) {
+    if (tab === 'lifers') renderLifers();
+    else if (tab === 'notable') renderNotable();
+    else renderPlaceFirsts(tab);
+  }
+
+  el('filterInput').addEventListener('input', () => {
+    for (const tab of Object.keys(state.listControls)) state.listControls[tab].page = 1;
+    renderLifers();
+    renderPlaceFirsts('country');
+    renderPlaceFirsts('state');
+    renderPlaceFirsts('county');
+    renderPlaceFirsts('world');
+    renderNotable();
+  });
+
+  document.addEventListener('change', (e) => {
+    const sortSel = e.target.closest('[data-user-sort-tab]');
+    if (sortSel) {
+      const tab = sortSel.dataset.userSortTab;
+      state.listControls[tab].sort = sortSel.value;
+      state.listControls[tab].page = 1;
+      rerenderTab(tab);
+      return;
+    }
+    const pageSizeSel = e.target.closest('[data-user-pagesize-tab]');
+    if (pageSizeSel) {
+      const tab = pageSizeSel.dataset.userPagesizeTab;
+      state.listControls[tab].pageSize = parseInt(pageSizeSel.value, 10);
+      state.listControls[tab].page = 1;
+      rerenderTab(tab);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const pageBtn = e.target.closest('[data-user-page-tab]');
+    if (!pageBtn) return;
+    const tab = pageBtn.dataset.userPageTab;
+    const controls = state.listControls[tab];
+    controls.page += pageBtn.dataset.pageDir === 'prev' ? -1 : 1;
+    rerenderTab(tab);
+  });
+
+  // Notable view settings are shared by both modes' Notable tabs.
+  document.addEventListener('change', (e) => {
+    const catSel = e.target.closest('[data-notable-category]');
+    const thresholdInput = e.target.closest('[data-notable-threshold]');
+    if (!catSel && !thresholdInput) return;
+    if (catSel) notableSettings.category = catSel.value;
+    if (thresholdInput) {
+      const v = Math.floor(Number(thresholdInput.value));
+      if (v > 0) notableSettings.rareThreshold = v;
+    }
+    saveNotableSettings();
+    state.listControls.notable.page = 1;
+    placeState.listControls.notable.page = 1;
+    renderNotable(); renderStats();
+    if (placeState.currentPlace) { renderPlaceNotable(); renderPlaceStats(); }
+  });
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-report]');
+    if (!btn) return;
+    const mode = btn.dataset.report;
+    const setLine = mode === 'user' ? setStatus : setPlaceStatus;
+    const format = btn.dataset.format;
+    try {
+      if (format === 'pdf') setLine('Preparing the PDF (loading species photos)...');
+      btn.disabled = true;
+      const data = await exportReport(mode, format);
+      const total = data.sections.reduce((n, s) => n + s.rows.length, 0);
+      if (format === 'pdf') {
+        setLine(`Opened the print dialog for the PDF (${total.toLocaleString()} rows). Choose "Save as PDF" as the destination if it isn't already selected.`);
+        return;
+      }
+      setLine(`Saved ${format === 'csv' ? 'spreadsheet' : 'report'} for ${mode === 'user' ? state.currentUsername : (placeState.currentPlace.display_name || placeState.currentPlace.name)} (${total.toLocaleString()} rows).`);
+    } catch (err) {
+      setLine(`Could not create the report: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ---------- place-mode event wiring ----------
+
+  document.querySelectorAll('.place-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.place-tab-btn').forEach((b) => b.classList.remove('active'));
+      el('placeSearchPanel').querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      el(`tab-place-${btn.dataset.placeTab}`).classList.add('active');
+    });
+  });
+
+  function rerenderPlaceTab(tab) {
+    if (tab === 'species') renderPlaceSpecies();
+    else if (tab === 'notable') renderPlaceNotable();
+    else renderPlaceRecords();
+  }
+
+  el('placeFilterInput').addEventListener('input', () => {
+    for (const tab of Object.keys(placeState.listControls)) placeState.listControls[tab].page = 1;
+    renderPlaceSpecies();
+    renderPlaceNotable();
+    renderPlaceRecords();
+  });
+
+  document.addEventListener('change', (e) => {
+    const sortSel = e.target.closest('[data-place-sort-tab]');
+    if (sortSel) {
+      const tab = sortSel.dataset.placeSortTab;
+      placeState.listControls[tab].sort = sortSel.value;
+      placeState.listControls[tab].page = 1;
+      rerenderPlaceTab(tab);
+      return;
+    }
+    const pageSizeSel = e.target.closest('[data-place-pagesize-tab]');
+    if (pageSizeSel) {
+      const tab = pageSizeSel.dataset.placePagesizeTab;
+      placeState.listControls[tab].pageSize = parseInt(pageSizeSel.value, 10);
+      placeState.listControls[tab].page = 1;
+      rerenderPlaceTab(tab);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const pageBtn = e.target.closest('[data-place-page-tab]');
+    if (!pageBtn) return;
+    const tab = pageBtn.dataset.placePageTab;
+    const controls = placeState.listControls[tab];
+    controls.page += pageBtn.dataset.pageDir === 'prev' ? -1 : 1;
+    rerenderPlaceTab(tab);
+  });
+
+  // Autocomplete: debounced so typing doesn't fire a request per keystroke. pendingPlace is the
+  // resolved { id, ... } object behind the current text — cleared whenever the text changes so a
+  // stale id can never be submitted, and re-armed only when the user actually picks a suggestion.
+  let pendingPlace = null;
+  function updatePlaceActionButtons() {
+    const enabled = !!pendingPlace;
+    el('placeLoadBtn').disabled = !enabled;
+    el('placeRefreshBtn').disabled = !enabled;
+    el('placeFullResyncBtn').disabled = !enabled;
+  }
+
+  // ---------- Autocomplete (usernames and places) ----------
+  // One dropdown for both search boxes. Users and places already saved on this device show
+  // straight away with no request; iNaturalist's own suggestions follow once typing pauses.
+  // Arrow keys move through the list, Enter picks, Escape closes.
+  function createAutocomplete({ input, list, savedItems, textOf, fetchRemote, keyOf, itemHtml, onPick, onEdit }) {
+    let entries = []; // { item, saved }
+    let active = -1;
+    let token = 0;
+    let timer = null;
+
+    const render = () => {
+      input.setAttribute('aria-expanded', entries.length ? 'true' : 'false');
+      if (!entries.length) { list.style.display = 'none'; list.innerHTML = ''; return; }
+      let html = '';
+      let group = null;
+      entries.forEach((en, i) => {
+        if (en.saved !== group) {
+          group = en.saved;
+          html += `<div class="autocomplete-heading">${en.saved ? 'Saved on this device' : 'On iNaturalist'}</div>`;
+        }
+        html += `<div class="autocomplete-item${i === active ? ' active' : ''}" role="option" aria-selected="${i === active}" data-ac-index="${i}">${itemHtml(en.item, en.saved)}</div>`;
+      });
+      list.innerHTML = html;
+      list.style.display = '';
+      const act = list.querySelector('.autocomplete-item.active');
+      if (act) act.scrollIntoView({ block: 'nearest' });
+    };
+
+    const close = () => { token++; clearTimeout(timer); entries = []; active = -1; render(); };
+
+    const update = async (withRemote) => {
+      const q = input.value.trim();
+      const lq = q.toLowerCase();
+      const myToken = ++token;
+      clearTimeout(timer);
+      let saved = [];
+      try { saved = await savedItems(); } catch {}
+      if (myToken !== token) return;
+      saved = saved.filter((it) => !lq || textOf(it).toLowerCase().includes(lq)).slice(0, lq ? 5 : 8);
+      const savedEntries = saved.map((item) => ({ item, saved: true }));
+      // Keep iNaturalist results that still match while new ones load, so the list doesn't flicker.
+      const keptRemote = entries.filter((en) => !en.saved && lq && textOf(en.item).toLowerCase().includes(lq));
+      const savedKeys = new Set(saved.map(keyOf));
+      entries = [...savedEntries, ...keptRemote.filter((en) => !savedKeys.has(keyOf(en.item)))];
+      if (active >= entries.length) active = -1;
+      render();
+      if (!withRemote || q.length < 2) return;
+      timer = setTimeout(async () => {
+        try {
+          const remote = await fetchRemote(q);
+          if (myToken !== token) return;
+          entries = [...savedEntries, ...remote.filter((r) => !savedKeys.has(keyOf(r))).map((item) => ({ item, saved: false }))];
+          if (active >= entries.length) active = -1;
+          render();
+        } catch { /* offline or rate-limited: saved suggestions are still shown */ }
+      }, 250);
+    };
+
+    const pick = (i) => {
+      const en = entries[i];
+      if (!en) return;
+      close();
+      onPick(en.item);
+    };
+
+    input.addEventListener('input', () => { if (onEdit) onEdit(); active = -1; update(true); });
+    input.addEventListener('focus', () => { if (!entries.length) update(false); });
+    input.addEventListener('blur', () => close());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!entries.length) { update(true); return; }
+        const n = entries.length;
+        active = e.key === 'ArrowDown' ? (active + 1) % n : (active <= 0 ? n - 1 : active - 1);
+        render();
+      } else if (e.key === 'Enter' && active >= 0 && entries[active]) {
+        e.preventDefault(); // tells the box's own Enter handler the dropdown dealt with it
+        pick(active);
+      } else if (e.key === 'Escape' && entries.length) {
+        e.preventDefault();
+        close();
+      }
+    });
+    // mousedown (not click) with preventDefault keeps focus in the box, so blur doesn't close the
+    // list before the pick registers, and scrolling the list with its scrollbar works.
+    list.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const item = e.target.closest('.autocomplete-item');
+      if (item) pick(parseInt(item.dataset.acIndex, 10));
+    });
+
+    return { close, items: () => entries.map((en) => en.item) };
+  }
+
+  // lastSyncAt is an ISO date string, so newest-first is a reverse string comparison.
+  const byRecentSync = (a, b) => String(b.lastSyncAt || '').localeCompare(String(a.lastSyncAt || ''));
+
+  async function savedUsers() {
+    const db = await dbPromise;
+    if (!db) return [];
+    const metas = await idbGetAll(db, 'user_meta');
+    return metas
+      .sort(byRecentSync)
+      .map((m) => ({ login: m.username, name: '', icon: '', count: m.count || 0 }));
+  }
+
+  async function savedPlaces() {
+    const db = await dbPromise;
+    if (!db) return [];
+    const metas = await idbGetAll(db, 'place_search_meta');
+    return metas
+      .sort(byRecentSync)
+      .map((m) => ({ id: m.placeId, name: m.placeName, display_name: m.displayName || m.placeName, admin_level: m.adminLevel, savedCount: m.count || 0 }));
+  }
+
+  const PLACE_LEVEL_NAMES = { 0: 'Country', 10: 'State / province', 20: 'County / parish', 30: 'Town', 100: 'Park' };
+  const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+
+  const userAc = createAutocomplete({
+    input: el('username'),
+    list: el('userSuggestions'),
+    savedItems: savedUsers,
+    textOf: (u) => `${u.login} ${u.name}`,
+    keyOf: (u) => u.login.toLowerCase(),
+    fetchRemote: autocompleteUsers,
+    itemHtml: (u, saved) => {
+      const icon = u.icon
+        ? `<img class="ac-icon" src="${escapeHtml(u.icon)}" alt="" loading="lazy">`
+        : '<span class="ac-icon"></span>';
+      const sub = saved
+        ? `${plural(u.count, 'observation')} saved`
+        : [u.name, plural(u.count, 'observation')].filter(Boolean).join(' · ');
+      return `${icon}<div class="ac-text"><div class="ac-main"><strong>${escapeHtml(u.login)}</strong></div><div class="ac-sub">${escapeHtml(sub)}</div></div>`;
+    },
+    onPick: (u) => { el('username').value = u.login; el('loadBtn').click(); },
+  });
+
+  function selectPlace(p) {
+    pendingPlace = { id: p.id, name: p.name, display_name: p.display_name, admin_level: p.admin_level };
+    el('placeQuery').value = p.display_name || p.name;
+    updatePlaceActionButtons();
+    try { localStorage.setItem('inat_last_place', JSON.stringify(pendingPlace)); } catch {}
+  }
+
+  const placeAc = createAutocomplete({
+    input: el('placeQuery'),
+    list: el('placeSuggestions'),
+    savedItems: savedPlaces,
+    textOf: (p) => p.display_name || p.name,
+    keyOf: (p) => String(p.id),
+    fetchRemote: autocompletePlaces,
+    itemHtml: (p, saved) => {
+      const level = PLACE_LEVEL_NAMES[p.admin_level];
+      const sub = saved ? `${p.savedCount.toLocaleString()} species saved` : level || '';
+      return `<div class="ac-text"><div class="ac-main">${escapeHtml(p.display_name || p.name)}</div>${sub ? `<div class="ac-sub">${escapeHtml(sub)}</div>` : ''}</div>`;
+    },
+    onPick: (p) => { selectPlace(p); el('placeLoadBtn').click(); },
+    onEdit: () => { pendingPlace = null; updatePlaceActionButtons(); },
+  });
+
+  document.querySelectorAll('.mode-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.dataset.mode;
+      el('userSearchPanel').style.display = mode === 'user' ? '' : 'none';
+      el('placeSearchPanel').style.display = mode === 'place' ? '' : 'none';
+      el('results').style.display = mode === 'user' && state.currentUsername ? '' : 'none';
+      el('placeResults').style.display = mode === 'place' && placeState.currentPlace ? '' : 'none';
+    });
+  });
+
+  function setStatus(text) { el('statusLine').textContent = text; }
+  function setProgress(fraction) {
+    const track = el('progressTrack');
+    if (fraction == null) { track.classList.remove('active'); return; }
+    track.classList.add('active');
+    el('progressFill').style.width = `${Math.min(100, Math.round(fraction * 100))}%`;
+  }
+
+  // mode: 'load' (use cache if present, else full fetch), 'diff' (incremental sync since last
+  // visit, falling back to a full fetch if this user was never cached), or 'full' (wipe the
+  // cache for this user and redownload everything, e.g. to reconcile upstream deletions).
+  async function loadUser(username, mode) {
+    const myGen = ++currentGeneration;
+    el('loadBtn').disabled = true;
+    el('stopBtn').disabled = false;
+    el('results').style.display = 'none';
+    for (const tab of Object.keys(state.listControls)) state.listControls[tab].page = 1; // keep sort/page-size prefs, reset position
+    state.verifyResults = {};
+    state.verifyProgress = { done: 0, total: 0, confirmed: 0 };
+    setVerifyStatusLine('');
+
+    try {
+      setStatus(dbBlockedMessage || "Opening saved data...");
+      const db = await dbPromise;
+      const usernameKey = username.toLowerCase();
+      const syncStartedAt = new Date().toISOString();
+      const meta = mode === 'full' ? undefined : await idbGet(db, 'user_meta', usernameKey);
+      let observations = null;
+      let syncSummary = null;
+
+      if (mode === 'full') {
+        setStatus('Clearing cached data for this user...');
+        await deleteObservationsForUser(db, usernameKey);
+      }
+
+      if (mode === 'load' && meta) {
+        observations = await getObservationsForUser(db, usernameKey);
+        syncSummary = `Loaded ${observations.length} observations from local cache (last synced ${new Date(meta.lastSyncAt).toLocaleString()}). Click Refresh to check for updates.`;
+        setStatus(syncSummary);
+      } else if (mode === 'diff' && meta) {
+        setStatus('Checking for new and edited observations since last sync...');
+        setProgress(0);
+        const touched = await fetchObservationDiff(username, myGen, db, meta.lastSyncAt, (found) => {
+          setStatus(`Checking for updates: ${found} added/edited observation${found === 1 ? '' : 's'} found so far...`);
+        });
+        if (myGen !== currentGeneration) return;
+        observations = await getObservationsForUser(db, usernameKey);
+        await idbPut(db, 'user_meta', { username: usernameKey, lastSyncAt: syncStartedAt, count: observations.length });
+        setProgress(null);
+        syncSummary = `Synced — ${touched.length} observation${touched.length === 1 ? '' : 's'} added or updated. ${observations.length} total for ${username}.`;
+      } else {
+        setStatus('Fetching observations...');
+        setProgress(0);
+        observations = await fetchAllObservations(username, myGen, db, (loaded, total) => {
+          setStatus(`Fetched ${loaded} of ~${total} observations...`);
+          setProgress(total ? loaded / total : 0);
+        });
+        if (myGen === currentGeneration) {
+          await idbPut(db, 'user_meta', { username: usernameKey, lastSyncAt: syncStartedAt, count: observations.length });
+        }
+      }
+
+      if (myGen !== currentGeneration) return;
+      if (!observations.length) { setStatus('No observations found for this user.'); setProgress(null); return; }
+
+      const placeIds = new Set();
+      for (const obs of observations) for (const pid of (obs.place_ids || [])) placeIds.add(pid);
+
+      setStatus('Resolving place names (country/state/county)...');
+      const placeCache = await fetchPlaces(Array.from(placeIds), myGen, (done, total) => {
+        if (total) setStatus(`Resolving places: ${done}/${total}...`);
+      });
+
+      if (myGen !== currentGeneration) return;
+
+      setProgress(null);
+      state.currentUsername = username;
+      state.observations = observations;
+      state.placeCache = placeCache;
+      state.lifers = buildLifers(observations);
+      state.placeFirsts = buildPersonalPlaceFirsts(observations, placeCache);
+      state.notable = identifyNotable(observations);
+      await loadTaxonInfoCache();
+      if (myGen !== currentGeneration) return;
+
+      setStatus(syncSummary || `Done. Loaded ${observations.length} observations for ${username}.`);
+      el('results').style.display = '';
+      renderAll();
+
+      // Both background jobs share the throttled request queue, so they interleave politely.
+      startAutoVerification(myGen);
+      enrichTaxa('user', state.notable.filter((c) => isSpeciesRank(c.obs.taxon)).map((c) => c.obs.taxon.id), userGenCheck(myGen), () => scheduleNotableRerender('user'));
+    } catch (err) {
+      if (myGen !== currentGeneration) return;
+      setProgress(null);
+      setStatus(`Error: ${err.message}`);
+    } finally {
+      if (myGen === currentGeneration) {
+        el('loadBtn').disabled = false;
+        el('stopBtn').disabled = true;
+      }
+    }
+  }
+
+  function setPlaceStatus(text) { el('placeStatusLine').textContent = text; }
+  function setPlaceProgress(fraction) {
+    const track = el('placeProgressTrack');
+    if (fraction == null) { track.classList.remove('active'); return; }
+    track.classList.add('active');
+    el('placeProgressFill').style.width = `${Math.min(100, Math.round(fraction * 100))}%`;
+  }
+
+  // mode: 'load' (use cache if present, else full fetch), 'refresh' (re-fetch the species list
+  // fresh — species_counts has no incremental "since" filter, so unlike user mode this can't be a
+  // true diff — while keeping cached "first found" lookups, since those facts rarely change), or
+  // 'full' (wipe all cached data for this place, including first-found lookups, and start over).
+  async function loadPlace(place, mode) {
+    const myGen = ++currentPlaceGeneration;
+    const isCancelled = placeGenCheck(myGen);
+    el('placeLoadBtn').disabled = true;
+    el('placeRefreshBtn').disabled = true;
+    el('placeFullResyncBtn').disabled = true;
+    el('placeStopBtn').disabled = false;
+    el('placeResults').style.display = 'none';
+    for (const tab of Object.keys(placeState.listControls)) placeState.listControls[tab].page = 1;
+    placeState.recordResults = {};
+    setPlaceStatus('');
+
+    try {
+      setPlaceStatus(dbBlockedMessage || "Opening saved data...");
+      const db = await dbPromise;
+      const placeId = place.id;
+      const syncStartedAt = new Date().toISOString();
+      const meta = mode === 'full' ? undefined : await idbGet(db, 'place_search_meta', placeId);
+      let speciesList = null;
+      let syncSummary = null;
+
+      if (mode === 'full') {
+        setPlaceStatus('Clearing cached data for this place...');
+        await deleteSpeciesForPlace(db, placeId);
+        await deleteRecordsForPlace(db, placeId);
+      }
+
+      if (mode === 'load' && meta) {
+        speciesList = await getSpeciesForPlace(db, placeId);
+        syncSummary = `Loaded ${speciesList.length} species from local cache (last synced ${new Date(meta.lastSyncAt).toLocaleString()}). Click Refresh to check for updates.`;
+        setPlaceStatus(syncSummary);
+      } else {
+        if (mode === 'refresh') await deleteSpeciesForPlace(db, placeId); // overwrite, not merge — see note above
+        setPlaceStatus(`Fetching species observed in ${place.display_name || place.name}...`);
+        setPlaceProgress(0);
+        speciesList = await fetchAllSpeciesCounts(placeId, isCancelled, (loaded, total) => {
+          setPlaceStatus(`Fetched ${loaded} of ~${total} species...`);
+          setPlaceProgress(total ? loaded / total : 0);
+        });
+        if (myGen !== currentPlaceGeneration) return;
+        await putSpeciesBatch(db, placeId, speciesList);
+        syncSummary = `Synced — ${speciesList.length} species found in ${place.display_name || place.name}.`;
+      }
+
+      if (myGen !== currentPlaceGeneration) return;
+      if (!speciesList.length) { setPlaceStatus('No species found for this place.'); setPlaceProgress(null); return; }
+
+      setPlaceStatus('Fetching total observation count...');
+      const totalObservations = await fetchPlaceTotalObservations(placeId, isCancelled);
+      if (myGen !== currentPlaceGeneration) return;
+
+      await idbPut(db, 'place_search_meta', { placeId, placeName: place.name, displayName: place.display_name || place.name, adminLevel: place.admin_level, lastSyncAt: syncStartedAt, count: speciesList.length });
+
+      const cachedRecords = await getRecordsForPlace(db, placeId);
+      const recordMap = {};
+      for (const r of cachedRecords) recordMap[r.key] = r;
+
+      setPlaceProgress(null);
+      placeState.currentPlace = place;
+      placeState.speciesList = speciesList;
+      placeState.totalObservations = totalObservations;
+      placeState.recordResults = recordMap;
+      await loadTaxonInfoCache();
+      if (myGen !== currentPlaceGeneration) return;
+
+      setPlaceStatus(syncSummary || `Done. Loaded ${speciesList.length} species for ${place.display_name || place.name}.`);
+      el('placeResults').style.display = '';
+      renderPlaceAll();
+
+      enrichTaxa('place', speciesList.filter((e) => isSpeciesRank(e.taxon)).map((e) => e.taxonId), isCancelled, () => scheduleNotableRerender('place'));
+    } catch (err) {
+      if (myGen !== currentPlaceGeneration) return;
+      setPlaceProgress(null);
+      setPlaceStatus(`Error: ${err.message}`);
+    } finally {
+      if (myGen === currentPlaceGeneration) {
+        el('placeLoadBtn').disabled = false;
+        el('placeRefreshBtn').disabled = false;
+        el('placeFullResyncBtn').disabled = false;
+        el('placeStopBtn').disabled = true;
+      }
+    }
+  }
+
+  el('loadBtn').addEventListener('click', () => {
+    const username = el('username').value.trim();
+    if (!username) return;
+    try { localStorage.setItem('inat_last_username', username); } catch {}
+    loadUser(username, 'load');
+  });
+
+  el('refreshBtn').addEventListener('click', () => {
+    const username = el('username').value.trim();
+    if (!username) return;
+    loadUser(username, 'diff');
+  });
+
+  el('fullResyncBtn').addEventListener('click', () => {
+    const username = el('username').value.trim();
+    if (!username) return;
+    loadUser(username, 'full');
+  });
+
+  el('stopBtn').addEventListener('click', () => {
+    currentGeneration++; // invalidates any in-flight fetch/verification loop
+    setStatus('Stopped.');
+    setProgress(null);
+    setVerifyStatusLine('');
+    el('loadBtn').disabled = false;
+    el('stopBtn').disabled = true;
+  });
+
+  el('username').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.defaultPrevented) return;
+    userAc.close();
+    el('loadBtn').click();
+  });
+
+  el('placeLoadBtn').addEventListener('click', () => {
+    if (!pendingPlace) return;
+    loadPlace(pendingPlace, 'load');
+  });
+
+  el('placeRefreshBtn').addEventListener('click', () => {
+    if (!pendingPlace) return;
+    loadPlace(pendingPlace, 'refresh');
+  });
+
+  el('placeFullResyncBtn').addEventListener('click', () => {
+    if (!pendingPlace) return;
+    loadPlace(pendingPlace, 'full');
+  });
+
+  el('placeStopBtn').addEventListener('click', () => {
+    currentPlaceGeneration++; // invalidates any in-flight fetch/verification loop
+    setPlaceStatus('Stopped.');
+    setPlaceProgress(null);
+    updatePlaceActionButtons();
+    el('placeStopBtn').disabled = true;
+  });
+
+  // Enter submits even if the user never clicked a dropdown suggestion — otherwise typing a
+  // full, correct place name and hitting Enter (the obvious first thing to try) silently does
+  // nothing, since Load stays disabled until a real place id is resolved. We resolve one here:
+  // whatever's already in the dropdown, or — if Enter beat the debounce/network — a fresh lookup.
+  el('placeQuery').addEventListener('keydown', async (e) => {
+    if (e.key !== 'Enter' || e.defaultPrevented) return;
+    if (pendingPlace) { placeAc.close(); el('placeLoadBtn').click(); return; }
+    const query = el('placeQuery').value;
+    if (!query.trim()) return;
+    const shown = placeAc.items();
+    placeAc.close();
+    if (shown.length) {
+      selectPlace(shown[0]);
+      el('placeLoadBtn').click();
+      return;
+    }
+    try {
+      const results = await autocompletePlaces(query);
+      if (!results.length || el('placeQuery').value !== query) return;
+      selectPlace(results[0]);
+      el('placeLoadBtn').click();
+    } catch (err) { /* transient network error — leave the field as-is */ }
+  });
+
+  try {
+    const last = localStorage.getItem('inat_last_username');
+    if (last) el('username').value = last;
+  } catch {}
+
+  try {
+    const lastPlace = localStorage.getItem('inat_last_place');
+    if (lastPlace) {
+      pendingPlace = JSON.parse(lastPlace);
+      el('placeQuery').value = pendingPlace.display_name || pendingPlace.name;
+      updatePlaceActionButtons();
+    }
+  } catch {}
+
+  // ---------- Backup data file wiring ----------
+
+  const backupButtons = ['exportBtn', 'importBtn', 'linkFileBtn', 'resumeAutoSaveBtn', 'unlinkFileBtn'];
+  async function withBackupButtonsDisabled(fn) {
+    backupButtons.forEach((id) => { el(id).disabled = true; });
+    try { await fn(); } finally {
+      backupButtons.forEach((id) => { el(id).disabled = false; });
+      updateBackupUI();
+    }
+  }
+
+  // "Choose what to export": one checkbox per cached user and searched place. Everything is
+  // ticked by default; if every box stays ticked, the export is a full backup.
+  async function renderExportChoices() {
+    const box = el('exportChoices');
+    box.textContent = 'Loading...';
+    const { users, places } = await listBackupContents();
+    if (!users.length && !places.length) { box.textContent = 'Nothing is cached yet.'; return; }
+    const row = (attr, value, label) => `<label class="export-choice"><input type="checkbox" ${attr}="${escapeHtml(String(value))}" checked> ${escapeHtml(label)}</label>`;
+    box.innerHTML = `
+      <div class="export-choice-actions">
+        <button type="button" class="secondary" data-export-all="1">Select all</button>
+        <button type="button" class="secondary" data-export-all="0">Select none</button>
+      </div>
+      ${users.length ? `<div class="export-group"><div class="export-group-title">Users</div>${users.map((u) => row('data-export-user', u.username, `${u.username} (${u.count.toLocaleString()} observations)`)).join('')}</div>` : ''}
+      ${places.length ? `<div class="export-group"><div class="export-group-title">Places</div>${places.map((p) => row('data-export-place', p.placeId, `${p.name} (${p.count.toLocaleString()} species)`)).join('')}</div>` : ''}`;
+  }
+
+  el('exportChooser').addEventListener('toggle', () => { if (el('exportChooser').open) renderExportChoices(); });
+  el('exportChoices').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-export-all]');
+    if (!btn) return;
+    el('exportChoices').querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = btn.dataset.exportAll === '1'; });
+  });
+
+  // Returns null (export everything) or { selection, label } for a partial export.
+  function currentExportSelection() {
+    if (!el('exportChooser').open) return null;
+    const boxes = [...el('exportChoices').querySelectorAll('input[type="checkbox"]')];
+    if (!boxes.length || boxes.every((cb) => cb.checked)) return null;
+    const users = boxes.filter((cb) => cb.checked && cb.dataset.exportUser != null).map((cb) => cb.dataset.exportUser);
+    const places = boxes.filter((cb) => cb.checked && cb.dataset.exportPlace != null).map((cb) => Number(cb.dataset.exportPlace));
+    const names = [...users, ...boxes.filter((cb) => cb.checked && cb.dataset.exportPlace != null).map((cb) => cb.parentElement.textContent.trim().replace(/\s*\(.*\)$/, ''))];
+    return { selection: { users: new Set(users), places: new Set(places) }, label: names.length === 1 ? names[0] : (names.length ? 'selection' : '') };
+  }
+
+  el('exportBtn').addEventListener('click', () => withBackupButtonsDisabled(async () => {
+    const chosen = currentExportSelection();
+    if (chosen && !chosen.selection.users.size && !chosen.selection.places.size) { setBackupStatus('Nothing selected to export.'); return; }
+    setBackupStatus('Preparing backup file...');
+    try {
+      const started = performance.now();
+      const summary = await exportBackupDownload(chosen && chosen.selection, chosen && chosen.label);
+      setBackupStatus(`Exported ${summarizeBackup(summary)} in ${((performance.now() - started) / 1000).toFixed(1)}s.`);
+    } catch (err) { setBackupStatus(`Export failed: ${err.message}`); }
+  }));
+
+  el('importBtn').addEventListener('click', () => el('importFileInput').click());
+
+  el('importFileInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-importing the same file later
+    if (!file) return;
+    withBackupButtonsDisabled(async () => {
+      setBackupStatus(`Reading ${file.name}...`);
+      try {
+        const summary = await importBackupFile(file, (done, total) => {
+          setBackupStatus(`Importing ${file.name}: ${done.toLocaleString()} / ${total.toLocaleString()} records...`);
+        });
+        setBackupStatus(`Imported ${summarizeBackup(summary)} from ${file.name}. Click Load to view a user or place from the restored cache.`);
+        if (el('exportChooser').open) renderExportChoices();
+      } catch (err) { setBackupStatus(`Import failed: ${err.message}`); }
+    });
+  });
+
+  el('linkFileBtn').addEventListener('click', () => withBackupButtonsDisabled(async () => {
+    let handle;
+    try {
+      const switching = linkedFileHandle && /\.json$/i.test(linkedFileHandle.name);
+      const opts = {
+        suggestedName: !canZip ? 'inat-highlights-backup.json'
+          : switching ? linkedFileHandle.name.replace(/\.json$/i, '.zip') : 'inat-highlights-backup.zip',
+        types: canZip
+          ? [{ description: 'Zipped backup', accept: { 'application/zip': ['.zip'] } }]
+          : [{ description: 'iNaturalist Highlights backup', accept: { 'application/json': ['.json'] } }],
+      };
+      if (linkedFileHandle) opts.startIn = linkedFileHandle; // open in the current file's folder
+      try { handle = await window.showSaveFilePicker(opts); } catch (err) {
+        if (err.name === 'AbortError' || !opts.startIn) throw err;
+        delete opts.startIn; // the old file may have been moved or deleted
+        handle = await window.showSaveFilePicker(opts);
+      }
+    } catch { return; } // picker cancelled
+    linkedFileHandle = handle;
+    zipSwitchFailed = false;
+    await settingsSet('linkedFileHandle', handle);
+    setBackupStatus(`Writing current cache to ${handle.name}...`);
+    try {
+      const summary = await writeLinkedFile();
+      setBackupStatus(`${takeRenameNotice()}Linked ${handle.name} and saved ${summarizeBackup(summary)}. It will be updated automatically from now on.`);
+    } catch (err) { setBackupStatus(`Could not write ${handle.name}: ${err.message}`); }
+  }));
+
+  el('resumeAutoSaveBtn').addEventListener('click', () => withBackupButtonsDisabled(async () => {
+    if (await linkedFilePermission(true) !== 'granted') { setBackupStatus('Permission to write the linked file was not granted.'); return; }
+    setBackupStatus(`Saving to ${linkedFileHandle.name}...`);
+    try {
+      await writeLinkedFile();
+      setBackupStatus(`${takeRenameNotice()}Auto-save resumed; saved to ${linkedFileHandle.name}.`);
+    } catch (err) { setBackupStatus(`Could not write ${linkedFileHandle.name}: ${err.message}`); }
+  }));
+
+  el('unlinkFileBtn').addEventListener('click', () => withBackupButtonsDisabled(async () => {
+    const name = linkedFileHandle && linkedFileHandle.name;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+    linkedFileHandle = null;
+    zipSwitchFailed = false;
+    await settingsSet('linkedFileHandle', undefined);
+    setBackupStatus(name ? `Unlinked ${name}. The file itself was left as-is.` : '');
+  }));
+
+  (async () => {
+    if (canLinkFile) {
+      try { linkedFileHandle = (await settingsGet('linkedFileHandle')) || null; } catch { linkedFileHandle = null; }
+    }
+    await updateBackupUI();
+    const db = await dbPromise;
+    const meta = await idbGetAll(db, 'user_meta');
+    const placeMeta = await idbGetAll(db, 'place_search_meta');
+    if (db && !meta.length && !placeMeta.length) {
+      setBackupStatus('The local cache is empty. If you have a backup file from before, click "Import from file" to restore it.');
+    }
+  })();
+})();
+</script>
+
+<!--nd:begin script--><script>
+/* Site navigation behaviour: mobile toggle, one dropdown open at a time. */
+(function () {
+  var nav = document.querySelector('.nd-nav');
+  if (!nav) return;
+  var toggle = nav.querySelector('.nd-toggle');
+  var drops = nav.querySelectorAll('.nd-drop');
+  if (toggle) toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('nd-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  drops.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (d.open) drops.forEach(function (o) { if (o !== d) o.open = false; });
+    });
+  });
+  function closeAll() {
+    drops.forEach(function (d) { d.open = false; });
+    nav.classList.remove('nd-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+  document.addEventListener('click', function (e) { if (!nav.contains(e.target)) closeAll(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+})();
+</script><!--nd:end script--></body>
+</html>

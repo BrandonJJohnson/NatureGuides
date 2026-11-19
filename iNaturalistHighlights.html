@@ -179,6 +179,39 @@
     padding: 2px 0;
     overflow-wrap: anywhere;
   }
+  .share-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    margin: 10px 0 4px;
+  }
+  .share-options label { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--muted); }
+  .share-options input, .share-options textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 0.9rem;
+  }
+  .share-options textarea { min-height: 54px; resize: vertical; }
+  .import-preview {
+    margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--accent);
+    border-radius: 10px; background: var(--badge-bg);
+  }
+  .import-preview .import-note {
+    margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--accent);
+    background: var(--panel); white-space: pre-wrap; font-size: 0.9rem;
+  }
+  .import-choice-state { font-size: 0.78rem; color: var(--muted); margin-left: 4px; }
+  .import-choice-state.newer { color: var(--accent); }
+  .import-choice-state.older { color: var(--warn); }
+  body.drag-import #backupPanel { outline: 3px dashed var(--accent); outline-offset: 4px; }
+  .usage-section { margin: 18px 0 6px; }
+  .usage-section h3 { margin: 0 0 6px; font-size: 1.02rem; }
+  .usage-bars { display: grid; gap: 4px; margin: 8px 0; max-width: 560px; }
+  .usage-bar { display: grid; grid-template-columns: 150px 1fr 70px; gap: 8px; align-items: center; font-size: 0.85rem; }
+  .usage-bar .track { display: block; height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+  .usage-bar .fill { display: block; height: 100%; background: var(--accent); }
+  .usage-bar .n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .usage-list { margin: 6px 0; padding-left: 18px; font-size: 0.88rem; }
+  .usage-list li { margin: 2px 0; overflow-wrap: anywhere; }
   .backup-title {
     margin-right: 4px;
     font-size: 0.95rem;
@@ -513,6 +546,7 @@
           <button class="tab-btn" data-tab="county">County / Parish Firsts</button>
           <button class="tab-btn" data-tab="world">World Firsts</button>
           <button class="tab-btn" data-tab="notable">Notable Finds</button>
+          <button class="tab-btn" data-tab="usage">Usage Beyond iNaturalist</button>
         </div>
 
         <div class="filter-row">
@@ -525,6 +559,7 @@
         <div class="tab-panel" id="tab-county"></div>
         <div class="tab-panel" id="tab-world"></div>
         <div class="tab-panel" id="tab-notable"></div>
+        <div class="tab-panel" id="tab-usage"></div>
       </div>
     </div>
   </div>
@@ -576,6 +611,7 @@
     <div class="search-row">
       <strong class="backup-title">Backup data file</strong>
       <button id="exportBtn" class="secondary" title="Download everything cached in this browser as a JSON file">Export to file</button>
+      <button id="shareBtn" class="secondary" style="display:none;" title="Send the backup file straight to another app or person (email, messages, AirDrop, Drive…)">Share…</button>
       <button id="importBtn" class="secondary" title="Load a previously exported backup file into this browser's cache (merges with what's already here)">Import from file</button>
       <button id="linkFileBtn" class="secondary" title="Pick a file that is rewritten automatically whenever the cache changes">Link auto-save file…</button>
       <button id="resumeAutoSaveBtn" class="secondary" style="display:none;">Resume auto-save</button>
@@ -583,9 +619,14 @@
       <input type="file" id="importFileInput" accept=".zip,.json,.gz,application/zip,application/json,application/gzip" hidden>
     </div>
     <details id="exportChooser" class="export-chooser">
-      <summary>Choose what to export (users and places)</summary>
+      <summary>Sharing options: choose users and places, add your name and a note</summary>
+      <div class="share-options">
+        <label>Shared by (optional)<input type="text" id="exportSharedBy" maxlength="80" placeholder="Your name or iNaturalist login"></label>
+        <label>Note for whoever imports it (optional)<textarea id="exportNote" maxlength="2000" placeholder="e.g. Parish firsts for East Baton Rouge, verified through Nov 2026"></textarea></label>
+      </div>
       <div id="exportChoices"></div>
     </details>
+    <div id="importPreview" class="import-preview" style="display:none;"></div>
     <div class="status-line" id="linkedFileInfo"></div>
     <div class="status-line" id="backupStatusLine"></div>
   </div>
@@ -619,7 +660,7 @@
   const PAGE_SIZE = 200;
   const DEFAULT_PAGE_SIZE = 25;
   const DB_NAME = 'inat_highlights';
-  const DB_VERSION = 4;
+  const DB_VERSION = 5;
 
   let lastRequestAt = 0;
   let currentGeneration = 0; // bumped on every new user-mode load/stop so stale async loops abandon themselves
@@ -714,6 +755,8 @@
         // v4: per-species worldwide facts (total iNaturalist observation count, global IUCN status)
         // used to flag rare and globally endangered species in Notable Finds.
         if (!db.objectStoreNames.contains('taxa')) db.createObjectStore('taxa', { keyPath: 'id' });
+        // v5: per-user "usage beyond iNaturalist" (records in GBIF, photos reused on Wikimedia).
+        if (!db.objectStoreNames.contains('usage')) db.createObjectStore('usage', { keyPath: 'username' });
       };
       // An older copy of this page open in another tab holds the old schema open and blocks the
       // upgrade until it closes — without this the page would just sit there silently.
@@ -766,7 +809,7 @@
   // the File System Access API (Chrome/Edge), a file can also be "linked" so it is rewritten
   // automatically a few seconds after the cache changes.
 
-  const BACKUP_STORES = ['observations', 'places', 'verifications', 'user_meta', 'place_species', 'place_records', 'place_search_meta', 'taxa'];
+  const BACKUP_STORES = ['observations', 'places', 'verifications', 'user_meta', 'place_species', 'place_records', 'place_search_meta', 'taxa', 'usage'];
   // Format 2 (current): records grouped per user and per searched place, stored as compact
   // tables (column names once, then rows of values), with each distinct taxon object stored once
   // in a shared dictionary and referenced by index, then gzip-compressed. Format 1 (one JSON
@@ -940,11 +983,12 @@
 
   // selection: null for everything, or { users: Set<username>, places: Set<placeId> }.
   // container: 'zip' (default for downloads), 'gzip' (older linked .gz files) or 'json'.
-  async function buildBackup(selection, container) {
+  // extras: { note, sharedBy } shown to whoever imports a shared file.
+  async function buildBackup(selection, container, extras) {
     const db = await dbPromise;
     if (!db) throw new Error('This browser has no IndexedDB, so there is nothing to export.');
-    const [obsAll, verAll, userMeta, spAll, recAll, placeMeta, adminPlaces, taxonInfoAll] =
-      await Promise.all(['observations', 'verifications', 'user_meta', 'place_species', 'place_records', 'place_search_meta', 'places', 'taxa'].map((s) => idbGetAll(db, s)));
+    const [obsAll, verAll, userMeta, spAll, recAll, placeMeta, adminPlaces, taxonInfoAll, usageAll] =
+      await Promise.all(['observations', 'verifications', 'user_meta', 'place_species', 'place_records', 'place_search_meta', 'places', 'taxa', 'usage'].map((s) => idbGetAll(db, s)));
     const wantUser = (u) => !selection || selection.users.has(u);
     const wantPlace = (p) => !selection || selection.places.has(p);
     const dict = makeTaxonDict();
@@ -952,7 +996,7 @@
 
     const userSections = new Map();
     const userSection = (u) => {
-      if (!userSections.has(u)) userSections.set(u, { username: u, meta: null, obs: [], ver: [] });
+      if (!userSections.has(u)) userSections.set(u, { username: u, meta: null, usage: null, obs: [], ver: [] });
       return userSections.get(u);
     };
     for (const m of userMeta) if (wantUser(m.username)) userSection(m.username).meta = { lastSyncAt: m.lastSyncAt, count: m.count };
@@ -982,9 +1026,15 @@
     for (const s of spAll) if (wantPlace(s.placeId)) placeSection(s.placeId).species.push({ ...s, taxon: dict.ref(s.taxon) });
     for (const r of recAll) if (wantPlace(r.placeId)) placeSection(r.placeId).records.push(r);
 
+    for (const u of usageAll) if (wantUser(u.username) && userSections.has(u.username)) {
+      const { username, ...rest } = u;
+      userSection(username).usage = rest;
+    }
     const users = [...userSections.values()].map((s) => {
       summary.users++; summary.observations += s.obs.length; summary.verifications += s.ver.length;
-      return { username: s.username, meta: s.meta, observations: toTable(s.obs, ['username']), verifications: toTable(s.ver) };
+      const out = { username: s.username, meta: s.meta, observations: toTable(s.obs, ['username']), verifications: toTable(s.ver) };
+      if (s.usage) out.usage = s.usage;
+      return out;
     });
     const places = [...placeSections.values()].map((s) => {
       summary.places++; summary.species += s.species.length; summary.records += s.records.length;
@@ -999,6 +1049,8 @@
       format: BACKUP_FORMAT,
       dbVersion: DB_VERSION,
       exportedAt: new Date().toISOString(),
+      ...(extras && extras.sharedBy ? { sharedBy: String(extras.sharedBy).slice(0, 80) } : {}),
+      ...(extras && extras.note ? { note: String(extras.note).slice(0, 2000) } : {}),
       taxonDict: toTable(dict.list),
       adminPlaces: toTable(selection ? adminPlaces.filter((p) => usedAdminPlaces.has(p.id)) : adminPlaces),
       taxonInfo: toTable(selection ? taxonInfoAll.filter((t) => usedTaxa.has(t.id)) : taxonInfoAll),
@@ -1039,8 +1091,8 @@
     return `inat-highlights-${safe || 'backup'}-${new Date().toISOString().slice(0, 10)}.${canZip ? 'zip' : 'json'}`;
   }
 
-  async function exportBackupDownload(selection, label) {
-    const { blob, summary } = await buildBackup(selection, 'zip');
+  async function exportBackupDownload(selection, label, extras) {
+    const { blob, summary } = await buildBackup(selection, 'zip', extras);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1099,6 +1151,7 @@
       for (const u of (data.users || [])) {
         if (!u || !u.username) continue;
         if (u.meta) out.user_meta.push({ username: u.username, ...u.meta });
+        if (u.usage) out.usage.push({ ...u.usage, username: u.username });
         for (const o of fromTable(u.observations)) out.observations.push({ ...o, taxon: taxonAt(o.taxon), username: u.username });
         for (const v of fromTable(u.verifications)) out.verifications.push(v);
       }
@@ -1122,16 +1175,111 @@
 
   // Merges the file's records into the cache: records with the same key are overwritten by the
   // file's copy, everything else already in the cache is kept.
-  async function importBackupFile(file, onProgress) {
+  // Reads a backup and lists what's in it, so the user can choose before anything is written.
+  async function previewBackupFile(file) {
+    const data = await readBackupFile(file);
+    const decoded = decodeBackup(data);
+    const users = new Map();
+    const userOf = (u) => { if (!users.has(u)) users.set(u, { username: u, meta: null, observations: 0, verifications: 0 }); return users.get(u); };
+    const owner = new Map();
+    for (const m of decoded.stores.user_meta) userOf(m.username).meta = m;
+    for (const o of decoded.stores.observations) { userOf(o.username).observations++; owner.set(o.id, o.username); }
+    for (const v of decoded.stores.verifications) { const u = owner.get(obsIdFromVerifyKey(v.key)); if (u) userOf(u).verifications++; }
+    const places = new Map();
+    const placeOf = (p) => { if (!places.has(p)) places.set(p, { placeId: p, meta: null, species: 0, records: 0 }); return places.get(p); };
+    for (const m of decoded.stores.place_search_meta) placeOf(m.placeId).meta = m;
+    for (const sp of decoded.stores.place_species) placeOf(sp.placeId).species++;
+    for (const r of decoded.stores.place_records) placeOf(r.placeId).records++;
+    return {
+      fileName: file.name,
+      exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : null,
+      sharedBy: typeof data.sharedBy === 'string' ? data.sharedBy.slice(0, 80) : '',
+      note: typeof data.note === 'string' ? data.note.slice(0, 2000) : '',
+      decoded,
+      users: [...users.values()].sort((a, b) => a.username.localeCompare(b.username)),
+      places: [...places.values()].sort((a, b) => String(a.meta && a.meta.placeName || a.placeId).localeCompare(String(b.meta && b.meta.placeName || b.placeId))),
+    };
+  }
+
+  // Keeps only the chosen users and places (shared lookups — places, taxa — always come along).
+  function selectImportStores(stores, sel) {
+    if (!sel) return stores;
+    const out = {};
+    for (const s of BACKUP_STORES) out[s] = [];
+    out.places = stores.places;
+    out.taxa = stores.taxa;
+    const obsOwner = new Map();
+    for (const o of stores.observations) if (sel.users.has(o.username)) { out.observations.push(o); obsOwner.set(o.id, o.username); }
+    for (const m of stores.user_meta) if (sel.users.has(m.username)) out.user_meta.push(m);
+    for (const u of stores.usage) if (sel.users.has(u.username)) out.usage.push(u);
+    for (const v of stores.verifications) if (obsOwner.has(obsIdFromVerifyKey(v.key))) out.verifications.push(v);
+    for (const m of stores.place_search_meta) if (sel.places.has(m.placeId)) out.place_search_meta.push(m);
+    for (const x of stores.place_species) if (sel.places.has(x.placeId)) out.place_species.push(x);
+    for (const r of stores.place_records) if (sel.places.has(r.placeId)) out.place_records.push(r);
+    return out;
+  }
+
+  // Finished verdicts beat partial ones, so a shared file can't undo checks already done here.
+  const VERDICT_RANK = { confirmed: 4, not_first: 4, done: 4, screened: 2, error: 1, pending: 0 };
+  function betterRecord(local, incoming) {
+    if (!local) return incoming;
+    const rl = VERDICT_RANK[local.status] ?? 0, ri = VERDICT_RANK[incoming.status] ?? 0;
+    if (ri !== rl) return ri > rl ? incoming : local;
+    return (incoming.checkedAt || 0) > (local.checkedAt || 0) ? incoming : local;
+  }
+  function mergeTaxonRecord(local, incoming) {
+    if (!local) return incoming;
+    const newer = (incoming.fetchedAt || 0) > (local.fetchedAt || 0);
+    const merged = newer ? { ...local, ...incoming } : { ...incoming, ...local };
+    const gbifFrom = (incoming.gbifFetchedAt || 0) > (local.gbifFetchedAt || 0) ? incoming : local;
+    for (const f of GBIF_FIELDS) if (gbifFrom[f] !== undefined) merged[f] = gbifFrom[f];
+    if (!merged.name) merged.name = local.name || incoming.name || null;
+    return merged;
+  }
+  // Strictly newer: a file synced at the same moment as the local copy only fills in gaps.
+  const isNewerSync = (local, incoming) => !local || !local.lastSyncAt || !!(incoming && incoming.lastSyncAt && incoming.lastSyncAt > local.lastSyncAt);
+
+  // Merges a (possibly someone else's) backup into the cache without losing newer local data:
+  // per user/place, the more recently synced copy wins; records only one side has are kept;
+  // verdicts keep the most complete result; species lookups keep the freshest facts.
+  async function mergeImportStores(stores, onProgress) {
     const db = await dbPromise;
     if (!db) throw new Error('This browser has no IndexedDB, so the backup cannot be loaded.');
-    const { stores, summary } = decodeBackup(await readBackupFile(file));
-    const total = BACKUP_STORES.reduce((s, k) => s + stores[k].length, 0);
+    const [lUserMeta, lPlaceMeta, lObsKeys, lSpKeys, lVer, lRec, lTaxa, lUsage] = await Promise.all([
+      idbGetAll(db, 'user_meta'), idbGetAll(db, 'place_search_meta'), idbGetAllKeys(db, 'observations'), idbGetAllKeys(db, 'place_species'),
+      idbGetAll(db, 'verifications'), idbGetAll(db, 'place_records'), idbGetAll(db, 'taxa'), idbGetAll(db, 'usage'),
+    ]);
+    const uMeta = new Map(lUserMeta.map((m) => [m.username, m]));
+    const pMeta = new Map(lPlaceMeta.map((m) => [m.placeId, m]));
+    const fileUMeta = new Map(stores.user_meta.map((m) => [m.username, m]));
+    const filePMeta = new Map(stores.place_search_meta.map((m) => [m.placeId, m]));
+    const userWins = new Map(), placeWins = new Map();
+    const userNewer = (u) => { if (!userWins.has(u)) userWins.set(u, isNewerSync(uMeta.get(u), fileUMeta.get(u))); return userWins.get(u); };
+    const placeNewer = (p) => { if (!placeWins.has(p)) placeWins.set(p, isNewerSync(pMeta.get(p), filePMeta.get(p))); return placeWins.get(p); };
+    const obsKeys = new Set(lObsKeys), spKeys = new Set(lSpKeys);
+    const verMap = new Map(lVer.map((v) => [v.key, v]));
+    const recMap = new Map(lRec.map((r) => [r.key, r]));
+    const taxaMap = new Map(lTaxa.map((t) => [t.id, t]));
+    const usageMap = new Map(lUsage.map((u) => [u.username, u]));
+
+    const write = {
+      observations: stores.observations.filter((o) => userNewer(o.username) || !obsKeys.has(o.id)),
+      user_meta: stores.user_meta.filter((m) => userNewer(m.username)),
+      place_species: stores.place_species.filter((x) => placeNewer(x.placeId) || !spKeys.has(x.key)),
+      place_search_meta: stores.place_search_meta.filter((m) => placeNewer(m.placeId)),
+      verifications: stores.verifications.filter((v) => betterRecord(verMap.get(v.key), v) === v),
+      place_records: stores.place_records.filter((r) => betterRecord(recMap.get(r.key), r) === r),
+      places: stores.places,
+      taxa: stores.taxa.map((t) => mergeTaxonRecord(taxaMap.get(t.id), t)),
+      usage: stores.usage.filter((u) => { const l = usageMap.get(u.username); return !l || (u.fetchedAt || 0) > (l.fetchedAt || 0); }),
+    };
+    const offered = BACKUP_STORES.reduce((n, k) => n + stores[k].length, 0);
+    const total = BACKUP_STORES.reduce((n, k) => n + write[k].length, 0);
     let done = 0;
     importInProgress = true;
     try {
       for (const name of BACKUP_STORES) {
-        const rows = stores[name];
+        const rows = write[name];
         for (let i = 0; i < rows.length; i += 2000) {
           await putChunkStrict(db, name, rows.slice(i, i + 2000));
           done += Math.min(2000, rows.length - i);
@@ -1141,8 +1289,11 @@
     } finally {
       importInProgress = false;
     }
+    for (const t of write.taxa) taxonInfo.set(t.id, t);
     scheduleAutoSave();
-    return summary;
+    const keptLocalUsers = [...userWins].filter(([, newer]) => !newer).map(([u]) => u);
+    const keptLocalPlaces = [...placeWins].filter(([, newer]) => !newer).map(([p]) => p);
+    return { written: total, skipped: offered - total, keptLocalUsers, keptLocalPlaces };
   }
 
   // Linked-file handles live in their own tiny database so the main cache schema is untouched.
@@ -1291,6 +1442,15 @@
       const req = db.transaction(storeName, 'readonly').objectStore(storeName).get(key);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(undefined);
+    });
+  }
+
+  function idbGetAllKeys(db, storeName) {
+    return new Promise((resolve) => {
+      if (!db) { resolve([]); return; }
+      const req = db.transaction(storeName, 'readonly').objectStore(storeName).getAllKeys();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
     });
   }
 
@@ -1683,11 +1843,12 @@
     { value: 'local', label: 'Protected / threatened status' },
     { value: 'obscured', label: 'Obscured location (sensitive)', userOnly: true },
   ];
-  const notableSettings = { category: 'all', rareThreshold: 100 };
+  const notableSettings = { category: 'all', rareThreshold: 100, useGbif: true };
   try {
     const saved = JSON.parse(localStorage.getItem('inat_notable_settings') || 'null');
     if (saved && NOTABLE_CATEGORIES.some((c) => c.value === saved.category)) notableSettings.category = saved.category;
     if (saved && saved.rareThreshold > 0) notableSettings.rareThreshold = Math.floor(saved.rareThreshold);
+    if (saved && typeof saved.useGbif === 'boolean') notableSettings.useGbif = saved.useGbif;
   } catch {}
   function saveNotableSettings() {
     try { localStorage.setItem('inat_notable_settings', JSON.stringify(notableSettings)); } catch {}
@@ -1698,9 +1859,16 @@
     const info = taxonInfo.get(taxon.id);
     const globalName = info && info.iucn >= 30 ? IUCN_NAMES[info.iucn] : null;
     if (globalName) reasons.push({ cat: 'global', text: `${globalName} worldwide (IUCN)`, cls: 'danger' });
-    if (info && isSpeciesRank(taxon) && info.observations_count != null && info.observations_count < notableSettings.rareThreshold) {
+    const world = worldRecordCount(info);
+    if (info && isSpeciesRank(taxon) && world != null && world < notableSettings.rareThreshold) {
       const n = info.observations_count;
-      reasons.push({ cat: 'rare', text: `Rare: ${n.toLocaleString()} observation${n === 1 ? '' : 's'} worldwide`, cls: 'warn' });
+      let text = `Rare: ${n.toLocaleString()} iNaturalist observation${n === 1 ? '' : 's'}`;
+      if (notableSettings.useGbif) {
+        if (info.gbifStatus === 'ok') text += ` · ${info.gbifCount.toLocaleString()} GBIF record${info.gbifCount === 1 ? '' : 's'}`;
+        else if (info.gbifStatus === 'nomatch') text += ' · not matched in GBIF';
+        else text += ' · GBIF not checked yet';
+      }
+      reasons.push({ cat: 'rare', text: `${text} worldwide`, cls: 'warn' });
     }
     const cs = taxon.conservation_status;
     if (taxon.threatened === true || (cs && cs.status_name && !/least concern/i.test(cs.status_name))) {
@@ -1784,8 +1952,199 @@
       observations_count: typeof t.observations_count === 'number' ? t.observations_count : null,
       iucn: pick && typeof pick.iucn === 'number' ? pick.iucn : null,
       iucnCode: pick ? pick.status || null : null,
+      name: t.name || null,
+      iconic: t.iconic_taxon_name || null,
+      rankLevel: typeof t.rank_level === 'number' ? t.rank_level : null,
       fetchedAt: Date.now(),
     };
+  }
+
+  // A refreshed iNaturalist lookup must not wipe the GBIF fields cached on the same record.
+  const GBIF_FIELDS = ['gbifKey', 'gbifName', 'gbifCount', 'gbifStatus', 'gbifFetchedAt'];
+  function keepGbifFields(rec) {
+    const prev = taxonInfo.get(rec.id);
+    if (prev) for (const f of GBIF_FIELDS) if (prev[f] !== undefined && rec[f] === undefined) rec[f] = prev[f];
+    return rec;
+  }
+
+  // ---------- GBIF: records beyond iNaturalist (museums, eBird, surveys, other platforms) ----------
+  //
+  // "Rare" means few records worldwide. iNaturalist alone undercounts many groups (birds above all,
+  // which have millions of eBird records in GBIF), so when GBIF is on, a species is rare only if
+  // it is rare in BOTH: the larger of its iNaturalist count and its GBIF occurrence count is used.
+  // GBIF already includes iNaturalist's research-grade records, so the two are not added together.
+  // Only species already under the threshold on iNaturalist need a GBIF lookup.
+
+  const GBIF_API = 'https://api.gbif.org/v1';
+  const GBIF_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  const GBIF_KEYS_PER_REQUEST = 50;
+  const gbifEnrich = { done: 0, total: 0, failed: 0, running: false };
+
+  // Separate, small queue for api.gbif.org (a different service with its own limits).
+  let gbifActive = 0;
+  const gbifWaiting = [];
+  async function gbifFetch(path, isCancelled) {
+    if (gbifActive >= 3) await new Promise((r) => gbifWaiting.push(r));
+    gbifActive++;
+    try {
+      for (let attempt = 0; ; attempt++) {
+        if (isCancelled()) throw new Error('Cancelled');
+        let res = null;
+        try { res = await fetch(`${GBIF_API}${path}`); } catch { res = null; }
+        if (res && res.ok) return res.json();
+        if (res && res.status < 500 && res.status !== 429) throw new Error(`GBIF error ${res.status}`);
+        if (attempt >= 3) throw new Error('Could not reach GBIF');
+        await sleep(2000 * (attempt + 1));
+      }
+    } finally {
+      gbifActive--;
+      const next = gbifWaiting.shift();
+      if (next) next();
+    }
+  }
+
+  // iNaturalist's iconic group → the GBIF backbone group used to disambiguate renamed species.
+  const ICONIC_TO_GBIF = {
+    Aves: 'Aves', Amphibia: 'Amphibia', Reptilia: 'Reptilia', Mammalia: 'Mammalia', Actinopterygii: 'Actinopterygii',
+    Insecta: 'Insecta', Arachnida: 'Arachnida', Mollusca: 'Mollusca', Plantae: 'Plantae', Fungi: 'Fungi', Chromista: 'Chromista', Protozoa: 'Protozoa',
+  };
+  const gbifGroupKeys = new Map();
+  async function gbifGroupKey(iconic, isCancelled) {
+    const name = ICONIC_TO_GBIF[iconic];
+    if (!name) return null;
+    if (!gbifGroupKeys.has(name)) {
+      gbifGroupKeys.set(name, gbifFetch(`/species/match?name=${encodeURIComponent(name)}&strict=true`, isCancelled)
+        .then((d) => (d.matchType === 'EXACT' ? d.usageKey : null)).catch(() => { gbifGroupKeys.delete(name); return null; }));
+    }
+    return gbifGroupKeys.get(name);
+  }
+
+  // Name → GBIF backbone taxon. Exact match first. iNaturalist often adopts new names before the
+  // GBIF backbone does (e.g. Cooper's Hawk: Astur cooperii here, Accipiter cooperii in GBIF), so
+  // if that fails, look for an accepted species with the same epithet inside the same group and
+  // use it only if exactly one turns up. Anything ambiguous stays unmatched (iNaturalist-only).
+  async function gbifMatch(info, isCancelled) {
+    const name = info.name;
+    if (!name) return null;
+    const exact = await gbifFetch(`/species/match?name=${encodeURIComponent(name)}&strict=true`, isCancelled);
+    const infraspecific = info.rankLevel != null && info.rankLevel < 10;
+    if (exact.matchType === 'EXACT' && (exact.rank === 'SPECIES' || infraspecific)) {
+      const key = infraspecific ? exact.usageKey : (exact.speciesKey || exact.usageKey);
+      return key ? { key, name: infraspecific ? exact.scientificName : (exact.species || exact.canonicalName) } : null;
+    }
+    const parts = name.split(/\s+/);
+    if (infraspecific || parts.length !== 2) return null;
+    const group = await gbifGroupKey(info.iconic, isCancelled);
+    if (!group) return null;
+    const found = await gbifFetch(`/species/search?q=${encodeURIComponent(parts[1])}&rank=SPECIES&status=ACCEPTED&datasetKey=d7dddbf4-2cf0-4f39-9b2a-bb099caae36c&highertaxonKey=${group}&limit=20`, isCancelled);
+    const same = (found.results || []).filter((r) => r.taxonomicStatus === 'ACCEPTED' && r.canonicalName && r.canonicalName.split(/\s+/)[1] === parts[1]);
+    return same.length === 1 ? { key: same[0].key, name: same[0].canonicalName } : null;
+  }
+
+  function needsGbif(info) {
+    if (!info || !notableSettings.useGbif || info.observations_count == null) return false;
+    if (info.observations_count >= notableSettings.rareThreshold) return false; // already not rare
+    return !info.gbifFetchedAt || Date.now() - info.gbifFetchedAt > GBIF_MAX_AGE_MS;
+  }
+
+  let gbifRunId = 0;
+  // taxa: the loaded taxon objects ({ id, name, rank_level }); names fill in for older cached
+  // records that predate storing them.
+  async function enrichGbif(taxa, onUpdate) {
+    const myRun = ++gbifRunId;
+    const isCancelled = () => myRun !== gbifRunId;
+    const byId = new Map();
+    for (const t of taxa) if (t && !byId.has(t.id)) byId.set(t.id, t);
+    const todo = [...byId.values()].map((t) => {
+      const info = taxonInfo.get(t.id);
+      if (!info) return null;
+      return { ...info, name: info.name || t.name || null, rankLevel: info.rankLevel != null ? info.rankLevel : (typeof t.rank_level === 'number' ? t.rank_level : null) };
+    }).filter(needsGbif);
+    Object.assign(gbifEnrich, { done: 0, total: todo.length, failed: 0, running: todo.length > 0 });
+    onUpdate();
+    if (!todo.length) return;
+    const db = await dbPromise;
+    const save = async (recs) => { for (const r of recs) taxonInfo.set(r.id, r); await idbPutMany(db, 'taxa', recs); };
+    try {
+      // 1) names → GBIF keys (one lookup each, cached with the record)
+      const matched = [];
+      await Promise.all(todo.map(async (info) => {
+        if (info.gbifKey && info.gbifName) { matched.push(info); return; }
+        try {
+          const m = await gbifMatch(info, isCancelled);
+          if (isCancelled()) return;
+          if (m) matched.push({ ...info, gbifKey: m.key, gbifName: m.name });
+          else {
+            await save([{ ...info, gbifKey: null, gbifName: null, gbifCount: null, gbifStatus: 'nomatch', gbifFetchedAt: Date.now() }]);
+            gbifEnrich.done++; onUpdate();
+          }
+        } catch (e) {
+          if (isCancelled()) return;
+          gbifEnrich.failed++; gbifEnrich.done++; onUpdate();
+        }
+      }));
+      // 2) occurrence counts, many species per request (faceted by species key)
+      const species = matched.filter((i) => !(i.rankLevel != null && i.rankLevel < 10));
+      const infra = matched.filter((i) => i.rankLevel != null && i.rankLevel < 10);
+      for (let i = 0; i < species.length; i += GBIF_KEYS_PER_REQUEST) {
+        if (isCancelled()) return;
+        const chunk = species.slice(i, i + GBIF_KEYS_PER_REQUEST);
+        try {
+          const qs = chunk.map((c) => `taxonKey=${c.gbifKey}`).join('&');
+          const d = await gbifFetch(`/occurrence/search?limit=0&facet=speciesKey&facetLimit=${chunk.length + 10}&${qs}`, isCancelled);
+          const counts = new Map();
+          for (const f of (d.facets || [])) for (const c of (f.counts || [])) counts.set(Number(c.name), c.count);
+          await save(chunk.map((c) => ({ ...c, gbifCount: counts.get(c.gbifKey) || 0, gbifStatus: 'ok', gbifFetchedAt: Date.now() })));
+        } catch (e) {
+          if (isCancelled()) return;
+          gbifEnrich.failed += chunk.length;
+        }
+        gbifEnrich.done += chunk.length;
+        onUpdate();
+      }
+      for (const c of infra) {
+        if (isCancelled()) return;
+        try {
+          const d = await gbifFetch(`/occurrence/search?limit=0&taxonKey=${c.gbifKey}`, isCancelled);
+          await save([{ ...c, gbifCount: d.count || 0, gbifStatus: 'ok', gbifFetchedAt: Date.now() }]);
+        } catch (e) { if (isCancelled()) return; gbifEnrich.failed++; }
+        gbifEnrich.done++;
+        onUpdate();
+      }
+    } finally {
+      if (!isCancelled()) { gbifEnrich.running = false; onUpdate(); }
+    }
+  }
+
+  // Worldwide record count used for "rare": the larger of iNaturalist and GBIF (GBIF includes iNat).
+  function worldRecordCount(info) {
+    if (!info || info.observations_count == null) return null;
+    if (notableSettings.useGbif && info.gbifStatus === 'ok' && typeof info.gbifCount === 'number') return Math.max(info.observations_count, info.gbifCount);
+    return info.observations_count;
+  }
+
+  // Older cached species records predate storing the scientific name; fill it in from the
+  // loaded taxa so the cache (and anything exported from it) is readable without the ids.
+  async function backfillTaxonNames(taxa) {
+    const fixed = [];
+    for (const t of taxa) {
+      const info = t && taxonInfo.get(t.id);
+      if (info && !info.name && t.name) {
+        const rec = { ...info, name: t.name, rankLevel: info.rankLevel != null ? info.rankLevel : (typeof t.rank_level === 'number' ? t.rank_level : null) };
+        taxonInfo.set(rec.id, rec);
+        fixed.push(rec);
+      }
+    }
+    if (fixed.length) await idbPutMany(await dbPromise, 'taxa', fixed);
+  }
+
+  // Runs the GBIF pass for whatever both modes currently show.
+  function refreshGbifForLoaded() {
+    const taxa = [];
+    if (state.notable) for (const c of state.notable) if (isSpeciesRank(c.obs.taxon)) taxa.push(c.obs.taxon);
+    if (placeState.speciesList) for (const e of placeState.speciesList) if (isSpeciesRank(e.taxon)) taxa.push({ ...e.taxon, id: e.taxonId });
+    backfillTaxonNames(taxa);
+    enrichGbif(taxa, () => { scheduleNotableRerender('user'); if (placeState.currentPlace) scheduleNotableRerender('place'); });
   }
 
   async function enrichTaxa(mode, taxonIds, isCancelled, onUpdate) {
@@ -1804,7 +2163,7 @@
       const chunk = missing.slice(i, i + TAXA_PER_REQUEST);
       try {
         const data = await throttledFetch(`${API_BASE}/taxa/${chunk.join(',')}`, isCancelled);
-        const recs = (data.results || []).map(taxonInfoFromApi);
+        const recs = (data.results || []).map(taxonInfoFromApi).map(keepGbifFields);
         for (const r of recs) taxonInfo.set(r.id, r);
         await idbPutMany(db, 'taxa', recs);
       } catch (e) {
@@ -1823,6 +2182,9 @@
     const parts = [];
     if (p.running) parts.push(`Looking up worldwide observation counts and IUCN status: ${p.done.toLocaleString()} / ${p.total.toLocaleString()} species checked — rare and endangered species appear here as they're found.`);
     if (p.failed) parts.push(`${p.failed.toLocaleString()} species couldn't be looked up (API error); reload later to retry.`);
+    const g = gbifEnrich;
+    if (notableSettings.useGbif && g.running) parts.push(`Checking GBIF for records outside iNaturalist: ${g.done.toLocaleString()} / ${g.total.toLocaleString()} rare candidates — species with many GBIF records drop off the rare list.`);
+    if (notableSettings.useGbif && !g.running && g.failed) parts.push(`${g.failed.toLocaleString()} species couldn't be checked in GBIF; reload later to retry.`);
     return parts.length ? `<div class="status-line">${escapeHtml(parts.join(' '))}</div>` : '';
   }
 
@@ -1838,7 +2200,10 @@
         </label>
         <label>Rare = fewer than
           <input type="number" min="1" step="1" data-notable-threshold value="${notableSettings.rareThreshold}" style="width:100px;">
-          observations worldwide
+          records worldwide
+        </label>
+        <label title="GBIF combines museum, survey, eBird and other platforms' records with iNaturalist's. A species counts as rare only if it is rare there too.">
+          <input type="checkbox" data-notable-gbif${notableSettings.useGbif ? ' checked' : ''}> Also count GBIF records
         </label>
       </div>`;
   }
@@ -1987,7 +2352,7 @@
   };
 
   // Unknown counts sort last for "rarest first"; unknown status sorts last for "most threatened".
-  const taxonRarity = (taxon) => { const i = taxonInfo.get(taxon.id); return i && i.observations_count != null ? i.observations_count : 1e12; };
+  const taxonRarity = (taxon) => { const n = worldRecordCount(taxonInfo.get(taxon.id)); return n != null ? n : 1e12; };
   const taxonThreat = (taxon) => { const i = taxonInfo.get(taxon.id); return i && i.iucn != null ? i.iucn : -1; };
   const NOTABLE_EXTRA_SORT_OPTIONS = [
     { value: 'rarity_asc', label: 'Rarest first (fewest worldwide)' },
@@ -2125,13 +2490,23 @@
   // Our own "notable" definition is threatened OR obscured, but iNaturalist's own search page
   // ANDs its filter params together, so there's no single threatened=true&geoprivacy=obscured
   // link that matches our criteria. Instead we hand it the exact deduped taxon id set we already
-  // computed — taxon_id accepts a comma list as an OR/IN filter (verified against the live API:
-  // taxon_id=A,B returned exactly count(A)+count(B)) — so the link returns precisely every
-  // observation of these species, including the repeat sightings this tab collapses into one card.
-  function notableSearchUrl(entries, username) {
-    const taxonIds = [...new Set(entries.map((n) => n.obs.taxon.id))];
-    const params = new URLSearchParams({ user_id: username, taxon_id: taxonIds.join(','), verifiable: 'any' });
+  // computed as an OR list, so the link returns precisely every observation of these species,
+  // including the repeat sightings this tab collapses into one card.
+  // The website needs `taxon_ids` for a list: the API accepts `taxon_id=A,B`, but the website's
+  // Explore page renders a blank page when given a list in `taxon_id`.
+  // Its server also caps the URL length (~8 KB), so very long lists are cut to the first 1,000.
+  const MAX_LINK_TAXA = 1000;
+  function inatTaxaUrl(scope, taxonIds) {
+    const params = new URLSearchParams({ ...scope, taxon_ids: taxonIds.slice(0, MAX_LINK_TAXA).join(','), verifiable: 'any' });
     return `https://www.inaturalist.org/observations?${params.toString()}`;
+  }
+  function notableLinkLabel(filterText, speciesCount, extra) {
+    const base = filterText ? 'View all matching notable finds on iNaturalist' : 'View all notable finds on iNaturalist';
+    const capped = speciesCount > MAX_LINK_TAXA ? ` (first ${MAX_LINK_TAXA.toLocaleString()} of ${speciesCount.toLocaleString()} species — iNaturalist limits link length)` : '';
+    return `${base}${extra || ''}${capped}`;
+  }
+  function notableSearchUrl(entries, username) {
+    return inatTaxaUrl({ user_id: username }, [...new Set(entries.map((n) => n.obs.taxon.id))]);
   }
 
   function renderNotable() {
@@ -2152,14 +2527,223 @@
       container.innerHTML = controlsHtml + '<div class="empty-msg">No notable finds match this view.</div>';
       return;
     }
-    const linkLabel = filterText ? 'View all matching notable finds on iNaturalist' : 'View all notable finds on iNaturalist';
+    const linkLabel = notableLinkLabel(filterText, new Set(filtered.map((n) => n.obs.taxon.id)).size, ' (every sighting, not just one per species)');
     const linkHtml = filtered.length <= 300
-      ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(notableSearchUrl(filtered, state.currentUsername))}" target="_blank" rel="noopener">${linkLabel} (every sighting, not just one per species) ↗</a></div>`
+      ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(notableSearchUrl(filtered, state.currentUsername))}" target="_blank" rel="noopener">${linkLabel} ↗</a></div>`
       : '';
     container.innerHTML = controlsHtml + linkHtml +
       `<div class="card-list">${pageItems.map((n) => obsCardHtml(n.obs, n.reasons)).join('')}</div>` +
       paginationHtml('user', 'notable', totalPages, totalCount, controls);
   }
+
+  // ---------- usage beyond iNaturalist ----------
+  //
+  // Where a user's observations and photos travel after iNaturalist:
+  //   GBIF       — research-grade, openly licensed observations are published to GBIF, the global
+  //                biodiversity index researchers download from. GBIF files them under the
+  //                observer's display name, and keeps the iNaturalist observation id as the
+  //                catalog number, which lets us check the match against this user's own records.
+  //   Wikimedia  — photos imported to Wikimedia Commons (they link back to the iNaturalist
+  //                profile), and the Wikipedia / Wikidata / Wikispecies pages that use them.
+  // GBIF tracks papers citing iNaturalist's dataset as a whole, but its API doesn't expose
+  // citations per record, so per-observation research use can't be listed here.
+
+  const INAT_GBIF_DATASET = '50c9509d-22c7-4a22-a47d-8c48425ef4a7';
+  const GBIF_KINGDOMS = { 0: 'Unknown', 1: 'Animals', 2: 'Archaea', 3: 'Bacteria', 4: 'Chromists', 5: 'Fungi', 6: 'Plants', 7: 'Protozoa', 8: 'Viruses' };
+  const USAGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const usageState = { username: '', data: null, running: false, step: '', error: '' };
+
+  async function commonsApi(params) {
+    const qs = new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
+    for (let attempt = 0; ; attempt++) {
+      let res = null;
+      try { res = await fetch(`https://commons.wikimedia.org/w/api.php?${qs}`); } catch { res = null; }
+      if (res && res.ok) return res.json();
+      if (attempt >= 2) throw new Error('Could not reach Wikimedia Commons');
+      await sleep(1500 * (attempt + 1));
+    }
+  }
+
+  async function fetchUsage(username, isCancelled) {
+    const usage = { username, fetchedAt: Date.now() };
+    const setStep = (t) => { usageState.step = t; renderUsage(); };
+
+    setStep('Looking up the iNaturalist profile…');
+    let profile = null;
+    try { profile = ((await throttledFetch(`${API_BASE}/users/${encodeURIComponent(username)}`, isCancelled)).results || [])[0] || null; } catch (e) { if (isCancelled()) throw e; }
+    const displayName = (profile && profile.name && profile.name.trim()) || (profile && profile.login) || username;
+    usage.displayName = displayName;
+    usage.userId = profile ? profile.id : null;
+
+    // GBIF
+    setStep('Counting this user\'s records in GBIF…');
+    try {
+      const base = `/occurrence/search?datasetKey=${INAT_GBIF_DATASET}&recordedBy=${encodeURIComponent(displayName)}`;
+      const d = await gbifFetch(`${base}&limit=50&facet=kingdomKey&facet=year&facet=country&facetLimit=60`, isCancelled);
+      const facet = (field) => { const f = (d.facets || []).find((x) => x.field === field); return f ? f.counts : []; };
+      const mine = new Set((state.observations || []).map((o) => String(o.id)));
+      const sample = (d.results || []);
+      const matched = sample.filter((r) => mine.has(String(r.catalogNumber))).length;
+      usage.gbif = {
+        name: displayName,
+        count: d.count || 0,
+        kingdoms: facet('KINGDOM_KEY').map((c) => ({ label: GBIF_KINGDOMS[c.name] || c.name, n: c.count })),
+        years: facet('YEAR').map((c) => ({ label: c.name, n: c.count })).sort((a, b) => Number(a.label) - Number(b.label)),
+        countries: facet('COUNTRY').map((c) => ({ label: c.name, n: c.count })),
+        sampleChecked: sample.length,
+        sampleMatched: matched,
+        researchGrade: (state.observations || []).filter((o) => o.quality_grade === 'research').length,
+      };
+    } catch (e) {
+      if (isCancelled()) throw e;
+      usage.gbif = { error: e.message };
+    }
+
+    // Wikimedia Commons
+    setStep('Finding photos reused on Wikimedia Commons…');
+    try {
+      const targets = [`www.inaturalist.org/people/${username}`];
+      if (usage.userId) targets.push(`www.inaturalist.org/people/${usage.userId}`);
+      // exturlusage matches by prefix ("people/sam" also finds "people/samantha"), so keep exact ones.
+      const profilePaths = new Set([`/people/${username}`, usage.userId ? `/people/${usage.userId}` : ''].filter(Boolean).map((x) => x.toLowerCase()));
+      const isExact = (url) => profilePaths.has(String(url || '').toLowerCase().replace(/^https?:\/\/[^/]+/, '').replace(/\/$/, ''));
+      const files = new Set();
+      for (const target of targets) {
+        let cont = null;
+        do {
+          if (isCancelled()) throw new Error('Cancelled');
+          const d = await commonsApi({ action: 'query', list: 'exturlusage', euquery: target, euprotocol: 'https', eunamespace: '6', eulimit: '500', ...(cont ? { eucontinue: cont } : {}) });
+          for (const r of (d.query && d.query.exturlusage) || []) if (isExact(r.url)) files.add(r.title);
+          cont = d.continue && d.continue.eucontinue;
+        } while (cont && files.size < 5000);
+      }
+      const fileList = [...files];
+      const pages = [];
+      const wikis = new Map();
+      for (let i = 0; i < fileList.length && i < 2000; i += 50) {
+        if (isCancelled()) throw new Error('Cancelled');
+        setStep(`Checking where ${fileList.length.toLocaleString()} Commons file${fileList.length === 1 ? '' : 's'} are used: ${Math.min(i + 50, fileList.length)} / ${fileList.length}…`);
+        let cont = {};
+        do {
+          const d = await commonsApi({ action: 'query', prop: 'globalusage', titles: fileList.slice(i, i + 50).join('|'), gulimit: '500', ...cont });
+          for (const pg of (d.query && d.query.pages) || []) {
+            for (const g of pg.globalusage || []) {
+              pages.push({ wiki: g.wiki, title: g.title, url: g.url, file: pg.title });
+              wikis.set(g.wiki, (wikis.get(g.wiki) || 0) + 1);
+            }
+          }
+          cont = d.continue && d.continue.gucontinue ? { gucontinue: d.continue.gucontinue } : null;
+        } while (cont);
+      }
+      const uniquePages = new Map();
+      for (const p of pages) if (!uniquePages.has(p.url)) uniquePages.set(p.url, p);
+      usage.commons = {
+        files: fileList.length,
+        sampleFiles: fileList.slice(0, 12),
+        filesUsed: new Set(pages.map((p) => p.file)).size,
+        pageCount: uniquePages.size,
+        wikis: [...wikis].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n),
+        pages: [...uniquePages.values()].slice(0, 100),
+      };
+    } catch (e) {
+      if (isCancelled()) throw e;
+      usage.commons = { error: e.message };
+    }
+    return usage;
+  }
+
+  async function loadUsage(force) {
+    const username = state.currentUsername;
+    if (!username) return;
+    const db = await dbPromise;
+    if (usageState.username !== username) { Object.assign(usageState, { username, data: null, error: '', step: '' }); }
+    if (!usageState.data) usageState.data = (await idbGet(db, 'usage', username.toLowerCase())) || null;
+    const stale = !usageState.data || Date.now() - (usageState.data.fetchedAt || 0) > USAGE_MAX_AGE_MS;
+    renderUsage();
+    if ((!force && !stale) || usageState.running) return;
+    const myGen = currentGeneration;
+    const isCancelled = userGenCheck(myGen);
+    usageState.running = true; usageState.error = '';
+    renderUsage();
+    try {
+      const data = await fetchUsage(username.toLowerCase(), isCancelled);
+      if (isCancelled()) return;
+      usageState.data = data;
+      await idbPut(db, 'usage', data);
+    } catch (e) {
+      if (!isCancelled()) usageState.error = e.message;
+    } finally {
+      if (!isCancelled()) { usageState.running = false; usageState.step = ''; renderUsage(); }
+      else usageState.running = false;
+    }
+  }
+
+  function usageBarsHtml(items, max = 12) {
+    const top = items.slice(0, max);
+    const peak = Math.max(1, ...top.map((x) => x.n));
+    return `<div class="usage-bars">${top.map((x) => `<div class="usage-bar"><span>${escapeHtml(String(x.label))}</span><span class="track"><span class="fill" style="width:${Math.max(2, Math.round((x.n / peak) * 100))}%"></span></span><span class="n">${x.n.toLocaleString()}</span></div>`).join('')}</div>`;
+  }
+
+  function renderUsage() {
+    const box = el('tab-usage');
+    if (!box) return;
+    const u = usageState.data;
+    const login = state.currentUsername;
+    const refreshBtn = `<button class="secondary" data-usage-refresh ${usageState.running ? 'disabled' : ''}>${u ? 'Refresh usage' : 'Check usage'}</button>`;
+    let html = `<div class="list-controls">${refreshBtn}${u && u.fetchedAt ? `<span class="status-line" style="margin:0">Checked ${new Date(u.fetchedAt).toLocaleString()}</span>` : ''}</div>`;
+    if (usageState.running) html += `<div class="status-line">${escapeHtml(usageState.step || 'Working…')}</div>`;
+    if (usageState.error) html += `<div class="status-line">Could not finish: ${escapeHtml(usageState.error)}</div>`;
+    if (!u) {
+      box.innerHTML = html + (usageState.running ? '' : '<div class="empty-msg">Open this tab to check where this user\'s observations and photos are used outside iNaturalist.</div>');
+      return;
+    }
+    const g = u.gbif || {};
+    const c = u.commons || {};
+    const cards = [
+      { num: g.error ? '—' : (g.count || 0).toLocaleString(), label: 'Records published to GBIF' },
+      { num: c.error ? '—' : (c.files || 0).toLocaleString(), label: 'Photos on Wikimedia Commons' },
+      { num: c.error ? '—' : (c.pageCount || 0).toLocaleString(), label: 'Wiki pages using those photos' },
+      { num: c.error ? '—' : (c.wikis || []).length.toLocaleString(), label: 'Wikis / languages' },
+    ];
+    html += `<div class="stat-grid">${cards.map((s) => `<div class="stat-card"><div class="num">${s.num}</div><div class="label">${s.label}</div></div>`).join('')}</div>`;
+
+    const gbifSearch = `https://www.gbif.org/occurrence/search?dataset_key=${INAT_GBIF_DATASET}&recorded_by=${encodeURIComponent(g.name || '')}`;
+    html += `<div class="usage-section"><h3>GBIF — the global biodiversity data index</h3>`;
+    if (g.error) html += `<div class="status-line">GBIF lookup failed: ${escapeHtml(g.error)}</div>`;
+    else {
+      html += `<p>${(g.count || 0).toLocaleString()} of this user's observations are published to <a href="https://www.gbif.org/" target="_blank" rel="noopener">GBIF</a> under the name “${escapeHtml(g.name || '')}”, where researchers, agencies and conservation groups download them for maps, range models and studies. Only research-grade observations with an open license are shared (${(g.researchGrade || 0).toLocaleString()} research-grade observations are cached here).</p>`;
+      if (g.sampleChecked) {
+        const shareMatched = g.sampleMatched / g.sampleChecked;
+        html += shareMatched < 0.8
+          ? `<div class="status-line">Only ${g.sampleMatched} of ${g.sampleChecked} sampled GBIF records belong to ${escapeHtml(login)}'s cached observations — the name “${escapeHtml(g.name || '')}” may be shared by other observers, or the cache may be out of date, so treat the count as approximate.</div>`
+          : `<div class="status-line">Checked: ${g.sampleMatched} of ${g.sampleChecked} sampled GBIF records match ${escapeHtml(login)}'s own observations.</div>`;
+      }
+      if ((g.kingdoms || []).length) html += `<div><strong>By group</strong>${usageBarsHtml(g.kingdoms)}</div>`;
+      if ((g.years || []).length) html += `<div><strong>By year observed</strong>${usageBarsHtml(g.years.slice(-15), 15)}</div>`;
+      if ((g.countries || []).length > 1) html += `<div><strong>By country</strong>${usageBarsHtml(g.countries)}</div>`;
+      html += `<p><a href="${escapeHtml(gbifSearch)}" target="_blank" rel="noopener">See these records on GBIF</a> · <a href="https://www.gbif.org/resource/search?contentType=literature&gbifDatasetKey=${INAT_GBIF_DATASET}" target="_blank" rel="noopener">Research papers citing iNaturalist data through GBIF</a></p>`;
+      html += `<div class="status-line">GBIF counts papers that cite iNaturalist's data as a whole but doesn't publish which individual records each paper used, so per-observation citations can't be shown.</div>`;
+    }
+    html += `</div>`;
+
+    html += `<div class="usage-section"><h3>Wikimedia Commons, Wikipedia and Wikidata</h3>`;
+    if (c.error) html += `<div class="status-line">Wikimedia lookup failed: ${escapeHtml(c.error)}</div>`;
+    else if (!c.files) html += `<p>No photos from this user were found on Wikimedia Commons. (Only openly licensed photos — CC0, CC BY, CC BY-SA — can be imported there.)</p>`;
+    else {
+      html += `<p>${c.files.toLocaleString()} photo${c.files === 1 ? '' : 's'} imported to Wikimedia Commons; ${(c.filesUsed || 0).toLocaleString()} of them appear on ${(c.pageCount || 0).toLocaleString()} page${c.pageCount === 1 ? '' : 's'} across Wikipedia, Wikidata, Wikispecies and other wikis.</p>`;
+      if ((c.wikis || []).length) html += `<div><strong>Where they're used</strong>${usageBarsHtml(c.wikis)}</div>`;
+      if ((c.pages || []).length) html += `<div><strong>Pages using these photos</strong><ul class="usage-list">${c.pages.slice(0, 40).map((p) => `<li><a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a> <span class="import-choice-state">${escapeHtml(p.wiki)}</span></li>`).join('')}</ul>${c.pages.length > 40 ? `<div class="status-line">…and ${(c.pageCount - 40).toLocaleString()} more.</div>` : ''}</div>`;
+      html += `<p><a href="https://commons.wikimedia.org/wiki/Special:LinkSearch?target=${encodeURIComponent(`https://www.inaturalist.org/people/${login}`)}" target="_blank" rel="noopener">All Commons files from ${escapeHtml(login)}'s photos</a></p>`;
+    }
+    html += `</div>`;
+    box.innerHTML = html;
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-usage-refresh]')) loadUsage(true);
+    const tab = e.target.closest('.tab-btn[data-tab="usage"]');
+    if (tab) loadUsage(false);
+  });
 
   function renderAll() {
     renderStats();
@@ -2169,6 +2753,9 @@
     renderPlaceFirsts('county');
     renderPlaceFirsts('world');
     renderNotable();
+    if (usageState.username !== state.currentUsername) Object.assign(usageState, { username: '', data: null, error: '', step: '', running: false });
+    renderUsage();
+    if (el('tab-usage').classList.contains('active')) loadUsage(false);
   }
 
   // ---------- place-mode rendering ----------
@@ -2247,9 +2834,7 @@
   }
 
   function placeNotableSearchUrl(entries) {
-    const taxonIds = [...new Set(entries.map((n) => n.taxonId))];
-    const params = new URLSearchParams({ place_id: placeState.currentPlace.id, taxon_id: taxonIds.join(','), verifiable: 'any' });
-    return `https://www.inaturalist.org/observations?${params.toString()}`;
+    return inatTaxaUrl({ place_id: placeState.currentPlace.id }, [...new Set(entries.map((n) => n.taxonId))]);
   }
 
   function renderPlaceNotable() {
@@ -2270,7 +2855,7 @@
       container.innerHTML = controlsHtml + '<div class="empty-msg">No notable species in this place match this view.</div>';
       return;
     }
-    const linkLabel = filterText ? 'View all matching notable finds on iNaturalist' : 'View all notable finds on iNaturalist';
+    const linkLabel = notableLinkLabel(filterText, new Set(filtered.map((n) => n.taxonId)).size);
     const linkHtml = filtered.length <= 300
       ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(placeNotableSearchUrl(filtered))}" target="_blank" rel="noopener">${linkLabel} ↗</a></div>`
       : '';
@@ -2342,11 +2927,11 @@
         const data = await throttledFetch(url, isCancelled);
         const earliest = data.results && data.results[0];
         record = earliest
-          ? { key, placeId, status: 'done', obsId: earliest.id, user: earliest.user && earliest.user.login, date: earliest.observed_on, checkedAt: Date.now() }
-          : { key, placeId, status: 'done', obsId: null, checkedAt: Date.now() };
+          ? { key, placeId, name: entry.taxon && entry.taxon.name || null, status: 'done', obsId: earliest.id, user: earliest.user && earliest.user.login, date: earliest.observed_on, checkedAt: Date.now() }
+          : { key, placeId, name: entry.taxon && entry.taxon.name || null, status: 'done', obsId: null, checkedAt: Date.now() };
       } catch (e) {
         if (isCancelled()) return;
-        record = { key, placeId, status: 'error', checkedAt: Date.now() };
+        record = { key, placeId, name: entry.taxon && entry.taxon.name || null, status: 'error', checkedAt: Date.now() };
       }
       placeState.recordResults[key] = record;
       idbPut(db, 'place_records', record);
@@ -2956,6 +3541,7 @@
   function rerenderTab(tab) {
     if (tab === 'lifers') renderLifers();
     else if (tab === 'notable') renderNotable();
+    else if (tab === 'usage') renderUsage();
     else renderPlaceFirsts(tab);
   }
 
@@ -3000,13 +3586,16 @@
   document.addEventListener('change', (e) => {
     const catSel = e.target.closest('[data-notable-category]');
     const thresholdInput = e.target.closest('[data-notable-threshold]');
-    if (!catSel && !thresholdInput) return;
+    const gbifBox = e.target.closest('[data-notable-gbif]');
+    if (!catSel && !thresholdInput && !gbifBox) return;
+    if (gbifBox) notableSettings.useGbif = gbifBox.checked;
     if (catSel) notableSettings.category = catSel.value;
     if (thresholdInput) {
       const v = Math.floor(Number(thresholdInput.value));
       if (v > 0) notableSettings.rareThreshold = v;
     }
     saveNotableSettings();
+    if (thresholdInput || gbifBox) refreshGbifForLoaded();
     state.listControls.notable.page = 1;
     placeState.listControls.notable.page = 1;
     renderNotable(); renderStats();
@@ -3361,7 +3950,8 @@
 
       // Both background jobs share the throttled request queue, so they interleave politely.
       startAutoVerification(myGen);
-      enrichTaxa('user', state.notable.filter((c) => isSpeciesRank(c.obs.taxon)).map((c) => c.obs.taxon.id), userGenCheck(myGen), () => scheduleNotableRerender('user'));
+      enrichTaxa('user', state.notable.filter((c) => isSpeciesRank(c.obs.taxon)).map((c) => c.obs.taxon.id), userGenCheck(myGen), () => scheduleNotableRerender('user'))
+        .then(() => { if (myGen === currentGeneration) refreshGbifForLoaded(); });
     } catch (err) {
       if (myGen !== currentGeneration) return;
       setProgress(null);
@@ -3455,7 +4045,8 @@
       el('placeResults').style.display = '';
       renderPlaceAll();
 
-      enrichTaxa('place', speciesList.filter((e) => isSpeciesRank(e.taxon)).map((e) => e.taxonId), isCancelled, () => scheduleNotableRerender('place'));
+      enrichTaxa('place', speciesList.filter((e) => isSpeciesRank(e.taxon)).map((e) => e.taxonId), isCancelled, () => scheduleNotableRerender('place'))
+        .then(() => { if (!isCancelled()) refreshGbifForLoaded(); });
     } catch (err) {
       if (myGen !== currentPlaceGeneration) return;
       setPlaceProgress(null);
@@ -3567,7 +4158,7 @@
 
   // ---------- Backup data file wiring ----------
 
-  const backupButtons = ['exportBtn', 'importBtn', 'linkFileBtn', 'resumeAutoSaveBtn', 'unlinkFileBtn'];
+  const backupButtons = ['exportBtn', 'shareBtn', 'importBtn', 'linkFileBtn', 'resumeAutoSaveBtn', 'unlinkFileBtn'];
   async function withBackupButtonsDisabled(fn) {
     backupButtons.forEach((id) => { el(id).disabled = true; });
     try { await fn(); } finally {
@@ -3617,27 +4208,125 @@
     setBackupStatus('Preparing backup file...');
     try {
       const started = performance.now();
-      const summary = await exportBackupDownload(chosen && chosen.selection, chosen && chosen.label);
+      const summary = await exportBackupDownload(chosen && chosen.selection, chosen && chosen.label, shareExtras());
       setBackupStatus(`Exported ${summarizeBackup(summary)} in ${((performance.now() - started) / 1000).toFixed(1)}s.`);
     } catch (err) { setBackupStatus(`Export failed: ${err.message}`); }
   }));
 
   el('importBtn').addEventListener('click', () => el('importFileInput').click());
 
-  el('importFileInput').addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = ''; // allow re-importing the same file later
-    if (!file) return;
+  function shareExtras() {
+    const sharedBy = el('exportSharedBy').value.trim();
+    const note = el('exportNote').value.trim();
+    try { localStorage.setItem('inat_share_name', sharedBy); } catch {}
+    return { sharedBy, note };
+  }
+  try { el('exportSharedBy').value = localStorage.getItem('inat_share_name') || ''; } catch {}
+
+  // Share… sends the file to another app (phones, and desktop browsers with the share sheet).
+  const canShareFiles = (() => {
+    try { return !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.zip', { type: 'application/zip' })] })); } catch { return false; }
+  })();
+  if (canShareFiles) el('shareBtn').style.display = '';
+  el('shareBtn').addEventListener('click', () => withBackupButtonsDisabled(async () => {
+    const chosen = currentExportSelection();
+    if (chosen && !chosen.selection.users.size && !chosen.selection.places.size) { setBackupStatus('Nothing selected to share.'); return; }
+    setBackupStatus('Preparing file to share...');
+    try {
+      const extras = shareExtras();
+      const { blob, summary } = await buildBackup(chosen && chosen.selection, 'zip', extras);
+      const file = new File([blob], backupFileName(chosen && chosen.label), { type: blob.type || 'application/zip' });
+      await navigator.share({ files: [file], title: 'iNaturalist Highlights data', text: extras.note || 'Open iNaturalist Highlights and use "Import from file" to load this.' });
+      setBackupStatus(`Shared ${summarizeBackup(summary)}.`);
+    } catch (err) {
+      setBackupStatus(err && err.name === 'AbortError' ? 'Sharing cancelled.' : `Share failed: ${err.message}`);
+    }
+  }));
+
+  let pendingImport = null;
+
+  function importStateHtml(local, incoming, what) {
+    if (!local) return `<span class="import-choice-state newer">new to this browser</span>`;
+    if (isNewerSync(local, incoming)) return `<span class="import-choice-state newer">file is newer (synced ${escapeHtml(new Date(incoming.lastSyncAt).toLocaleDateString())}) — replaces yours, adds missing checks</span>`;
+    if (incoming && local.lastSyncAt === incoming.lastSyncAt) return `<span class="import-choice-state">same sync as yours — only adds anything missing</span>`;
+    return `<span class="import-choice-state older">your copy is newer — only adds ${what} you don't have</span>`;
+  }
+
+  async function showImportPreview(file) {
+    const box = el('importPreview');
+    setBackupStatus(`Reading ${file.name}...`);
+    let preview;
+    try { preview = await previewBackupFile(file); } catch (err) { setBackupStatus(`Import failed: ${err.message}`); return; }
+    const db = await dbPromise;
+    const [lUser, lPlace] = await Promise.all([idbGetAll(db, 'user_meta'), idbGetAll(db, 'place_search_meta')]);
+    const uMeta = new Map(lUser.map((m) => [m.username, m]));
+    const pMeta = new Map(lPlace.map((m) => [m.placeId, m]));
+    pendingImport = preview;
+    const row = (attr, value, label, stateHtml) => `<label class="export-choice"><input type="checkbox" ${attr}="${escapeHtml(String(value))}" checked> ${escapeHtml(label)} ${stateHtml}</label>`;
+    const n = (x) => x.toLocaleString();
+    const from = [preview.sharedBy ? `shared by ${escapeHtml(preview.sharedBy)}` : '', preview.exportedAt ? `exported ${escapeHtml(new Date(preview.exportedAt).toLocaleString())}` : ''].filter(Boolean).join(', ');
+    box.innerHTML = `
+      <div class="export-group-title">Import ${escapeHtml(preview.fileName)}${from ? ` — ${from}` : ''}</div>
+      ${preview.note ? `<div class="import-note">${escapeHtml(preview.note)}</div>` : ''}
+      ${preview.users.length ? `<div class="export-group"><div class="export-group-title">Users</div>${preview.users.map((u) => row('data-import-user', u.username, `${u.username} (${n(u.observations)} observations, ${n(u.verifications)} first-record checks)`, importStateHtml(uMeta.get(u.username), u.meta, 'observations and checks'))).join('')}</div>` : ''}
+      ${preview.places.length ? `<div class="export-group"><div class="export-group-title">Places</div>${preview.places.map((p) => row('data-import-place', p.placeId, `${(p.meta && p.meta.placeName) || `Place ${p.placeId}`} (${n(p.species)} species, ${n(p.records)} first-finder records)`, importStateHtml(pMeta.get(p.placeId), p.meta, 'species and records'))).join('')}</div>` : ''}
+      ${!preview.users.length && !preview.places.length ? '<div class="status-line">This file only holds shared lookups (species facts); importing adds those.</div>' : ''}
+      <div class="export-choice-actions">
+        <button type="button" data-import-confirm>Import selected</button>
+        <button type="button" class="secondary" data-import-cancel>Cancel</button>
+      </div>
+      <div class="status-line">Nothing in this browser is lost: finished checks are never replaced by unfinished ones, and the more recently synced copy of each user or place wins.</div>`;
+    box.style.display = '';
+    setBackupStatus('');
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  el('importPreview').addEventListener('click', (e) => {
+    if (e.target.closest('[data-import-cancel]')) { pendingImport = null; el('importPreview').style.display = 'none'; setBackupStatus('Import cancelled.'); return; }
+    if (!e.target.closest('[data-import-confirm]') || !pendingImport) return;
+    const preview = pendingImport;
+    const boxes = [...el('importPreview').querySelectorAll('input[type="checkbox"]')];
+    const all = boxes.every((cb) => cb.checked);
+    const sel = all ? null : {
+      users: new Set(boxes.filter((cb) => cb.checked && cb.dataset.importUser != null).map((cb) => cb.dataset.importUser)),
+      places: new Set(boxes.filter((cb) => cb.checked && cb.dataset.importPlace != null).map((cb) => Number(cb.dataset.importPlace))),
+    };
+    pendingImport = null;
+    el('importPreview').style.display = 'none';
     withBackupButtonsDisabled(async () => {
-      setBackupStatus(`Reading ${file.name}...`);
       try {
-        const summary = await importBackupFile(file, (done, total) => {
-          setBackupStatus(`Importing ${file.name}: ${done.toLocaleString()} / ${total.toLocaleString()} records...`);
+        const res = await mergeImportStores(selectImportStores(preview.decoded.stores, sel), (done, total) => {
+          setBackupStatus(`Importing ${preview.fileName}: ${done.toLocaleString()} / ${total.toLocaleString()} records...`);
         });
-        setBackupStatus(`Imported ${summarizeBackup(summary)} from ${file.name}. Click Load to view a user or place from the restored cache.`);
+        const kept = [...res.keptLocalUsers, ...res.keptLocalPlaces.map((p) => { const x = preview.places.find((q) => q.placeId === p); return (x && x.meta && x.meta.placeName) || `place ${p}`; })];
+        setBackupStatus(`Imported ${res.written.toLocaleString()} records from ${preview.fileName}` +
+          (res.skipped ? ` (${res.skipped.toLocaleString()} skipped because this browser already had the same or newer data)` : '') +
+          (kept.length ? `. Kept your newer copy of: ${kept.join(', ')}` : '') + '. Click Load to view a user or place.');
         if (el('exportChooser').open) renderExportChoices();
       } catch (err) { setBackupStatus(`Import failed: ${err.message}`); }
     });
+  });
+
+  el('importFileInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-importing the same file later
+    if (file) showImportPreview(file);
+  });
+
+  // Drop a backup file anywhere on the page to import it.
+  let dragDepth = 0;
+  const isFileDrag = (e) => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  document.addEventListener('dragenter', (e) => { if (!isFileDrag(e)) return; dragDepth++; document.body.classList.add('drag-import'); });
+  document.addEventListener('dragleave', (e) => { if (!isFileDrag(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('drag-import'); });
+  document.addEventListener('dragover', (e) => { if (isFileDrag(e)) e.preventDefault(); });
+  document.addEventListener('drop', (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    document.body.classList.remove('drag-import');
+    const file = [...e.dataTransfer.files].find((f) => /\.(zip|json|gz)$/i.test(f.name));
+    if (file) showImportPreview(file);
+    else setBackupStatus('Drop an iNaturalist Highlights backup (.zip, .json or .gz) to import it.');
   });
 
   el('linkFileBtn').addEventListener('click', () => withBackupButtonsDisabled(async () => {

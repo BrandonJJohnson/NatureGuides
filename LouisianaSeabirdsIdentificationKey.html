@@ -2044,8 +2044,29 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
-  /* ── iNaturalist request queue: max 3 in flight, retry 429/5xx with backoff ── */
-  var queue = [], active = 0, MAX = 3;
+  /* ── connectivity: resolves when the browser is back online, or after maxMs ── */
+  function waitOnline(maxMs) {
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish() { if (done) return; done = true; window.removeEventListener('online', finish); resolve(); }
+      window.addEventListener('online', finish);
+      if (maxMs != null) setTimeout(finish, maxMs);
+    });
+  }
+  var REQUEST_TIMEOUT_MS = 20000;
+  function fetchWithTimeout(url) {
+    var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, REQUEST_TIMEOUT_MS) : null;
+    return fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(
+      function (r) { clearTimeout(timer); return r; },
+      function (e) { clearTimeout(timer); throw e; });
+  }
+
+  /* ── iNaturalist request queue: max 3 in flight. Retries rate limits (which reach the
+     browser as network errors, because iNaturalist's 429 replies carry no CORS headers),
+     server errors, timeouts and dropped connections with backoff; while the browser is
+     offline it waits for the connection instead of burning retries. ── */
+  var queue = [], active = 0, MAX = 3, MAX_ATTEMPTS = 5;
   function inat(path) {
     return new Promise(function (resolve, reject) { queue.push({ url: API + path, resolve: resolve, reject: reject }); pump(); });
   }
@@ -2057,15 +2078,17 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
   }
   function run(job) {
     var attempt = 0;
+    function retry(err) {
+      if (navigator.onLine === false) return waitOnline().then(go);          // offline: wait, don't count it
+      if (++attempt >= MAX_ATTEMPTS) { job.reject(err); return; }
+      return sleep(1500 * Math.pow(2, attempt - 1)).then(go);                 // 1.5s, 3s, 6s, 12s
+    }
     function go() {
-      return fetch(job.url, { headers: { Accept: 'application/json' } }).then(function (r) {
+      return fetchWithTimeout(job.url).then(function (r) {
         if (r.ok) return r.json().then(job.resolve);
-        if ((r.status === 429 || r.status >= 500) && attempt < 3) { attempt++; return sleep(1200 * Math.pow(2, attempt)).then(go); }
+        if (r.status === 429 || r.status >= 500) return retry(new Error('HTTP ' + r.status));
         job.reject(new Error('HTTP ' + r.status));
-      }, function (err) {
-        if (attempt < 1) { attempt++; return sleep(1500).then(go); }
-        job.reject(err);
-      });
+      }, retry);
     }
     return go().catch(job.reject);
   }
@@ -2110,9 +2133,25 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
     if (!src || src.indexOf('data:') === 0) return;
     var k = img.getAttribute('data-species-photo') || keyForUrl(src);
     if (!k || !ORIGINAL[k] || ORIGINAL[k] === src) return;
-    if (PHOTOS[k] === src) PHOTOS[k] = ORIGINAL[k];   // for this visit only; saved choices stay
+    if (PHOTOS[k] === src) { PHOTOS[k] = ORIGINAL[k]; fellBack[k] = src; }   // saved choices stay
     img.src = ORIGINAL[k];
   }, true);
+
+  // Photos that fell back because the connection was down come back by themselves once it
+  // returns (or when the tab is shown again) — no reload needed.
+  var fellBack = {};
+  function restoreRemotePhotos() {
+    Object.keys(fellBack).forEach(function (k) {
+      var url = fellBack[k];
+      delete fellBack[k];
+      var probe = new Image();
+      probe.onload = function () { if (PHOTOS[k] === ORIGINAL[k]) { PHOTOS[k] = url; paint(k); } };
+      probe.onerror = function () { if (navigator.onLine === false) fellBack[k] = url; };   // still offline: try next time
+      probe.src = url;
+    });
+  }
+  window.addEventListener('online', restoreRemotePhotos);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') restoreRemotePhotos(); });
 
   window.applyStoredPhotoOverrides = function () { Object.keys(SPECIES).forEach(paint); };
 
@@ -2137,35 +2176,86 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
     if (typeof closePhotoPicker === 'function') closePhotoPicker();
   };
 
+  // Photo picker: the built-in version shows "No CC-licensed photos found" when iNaturalist
+  // can't be reached, which looks like a real (empty) answer. This one keeps trying while the
+  // picker stays open for that species, and says it's reconnecting.
+  if (typeof window.fetchPickerCandidates === 'function' && typeof PICKER_SORTS !== 'undefined') {
+    window.fetchPickerCandidates = function (sciName, sortIdx) {
+      var key = (typeof pickerKey !== 'undefined') ? pickerKey : null;
+      var q = PICKER_SORTS[sortIdx];
+      var licenses = (typeof PP_LICENSES !== 'undefined') ? PP_LICENSES : Object.keys(USABLE);
+      function stillOpen() {
+        var box = $('#photo-picker');
+        return box && !box.classList.contains('hidden') && (typeof pickerKey === 'undefined' || pickerKey === key);
+      }
+      function attempt(n) {
+        return inat('observations?taxon_name=' + encodeURIComponent(sciName) + '&' + q.params + '&photos=true&per_page=50').then(function (data) {
+          var found = [], seen = {};
+          (data.results || []).some(function (obs) {
+            return (obs.photos || []).some(function (photo) {
+              if (licenses.indexOf(photo.license_code) < 0) return false;
+              var med = photo.url.replace(/\/(square|small|thumb|large|original|medium)\./, '/medium.');
+              if (seen[med]) return false;
+              seen[med] = true;
+              found.push({ url: med, by: obs.user ? obs.user.login : '', license: photo.license_code, obs_id: obs.id });
+              return found.length >= 8;
+            });
+          });
+          return found;
+        }, function () {
+          if (!stillOpen()) return [];
+          var grid = $('#picker-grid');
+          if (grid) grid.innerHTML = '<div class="picker-loading">Can’t reach iNaturalist right now — reconnecting automatically…</div>';
+          return waitOnline(Math.min(30000, 5000 * (n + 1))).then(function () { return stillOpen() ? attempt(n + 1) : []; });
+        });
+      }
+      return attempt(0);
+    };
+  }
+
+  // Species iNaturalist couldn't be reached for are retried automatically (when the connection
+  // returns, or after a pause), so a flaky connection doesn't leave the refresh half done.
   window.refreshPhotos = function (btn) {
     var sel = btn && btn.parentElement && btn.parentElement.querySelector('.photo-sort-select');
     var sort = sel ? sel.value : 'quality_grade=research&order_by=votes&order=desc';
-    var keys = Object.keys(SPECIES), updated = 0, failed = 0, done = 0;
+    var all = Object.keys(SPECIES), updated = 0, noPhoto = 0;
     $$('.refresh-photo-btn').forEach(function (b) { b.disabled = true; });
     setStatus('Fetching photos…');
-    return Promise.all(keys.map(function (k) {
-      return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&' + sort + '&per_page=20&photos=true')
-        .then(function (d) {
-          var res = d.results || [];
-          for (var i = 0; i < res.length; i++) {
-            var ph = (res[i].photos || []).filter(function (p) { return USABLE[p.license_code]; })[0];
-            if (ph) {
-              var url = ph.url.replace(/\/(square|small|thumb|large|original)\./, '/medium.');
-              var by = res[i].user ? res[i].user.login : '';
-              store.set(refreshedKey(k), { url: url, by: by });
-              if (!chosenPhoto(k)) { PHOTOS[k] = url; SPECIES[k].by = by; }
-              updated++; return;
+    function pass(keys, round) {
+      var unreachable = [], done = 0;
+      return Promise.all(keys.map(function (k) {
+        return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&' + sort + '&per_page=20&photos=true')
+          .then(function (d) {
+            var res = d.results || [];
+            for (var i = 0; i < res.length; i++) {
+              var ph = (res[i].photos || []).filter(function (p) { return USABLE[p.license_code]; })[0];
+              if (ph) {
+                var url = ph.url.replace(/\/(square|small|thumb|large|original)\./, '/medium.');
+                var by = res[i].user ? res[i].user.login : '';
+                store.set(refreshedKey(k), { url: url, by: by });
+                if (!chosenPhoto(k)) { PHOTOS[k] = url; SPECIES[k].by = by; }
+                updated++; return;
+              }
             }
-          }
-          failed++;
-        }, function () { failed++; })
-        .then(function () { done++; setStatus(done + '/' + keys.length + ' photos checked…'); });
-    })).then(function () {
-      keys.forEach(paint);
-      rerender();
+            noPhoto++;
+          }, function () { unreachable.push(k); })
+          .then(function () { done++; setStatus((round ? 'Retrying: ' : '') + done + '/' + keys.length + ' photos checked…'); });
+      })).then(function () {
+        keys.forEach(paint);
+        rerender();
+        if (unreachable.length && round < 3) {
+          setStatus('✓ ' + updated + ' photos updated · ' + unreachable.length + ' couldn’t be reached — retrying automatically…');
+          return waitOnline(15000 * (round + 1)).then(function () { return pass(unreachable, round + 1); });
+        }
+        return unreachable.length;
+      });
+    }
+    return pass(all, 0).then(function (stillUnreachable) {
       $$('.refresh-photo-btn').forEach(function (b) { b.disabled = false; });
-      setStatus(failed === keys.length ? 'Could not reach iNaturalist — showing built-in photos'
-        : (failed ? '⚠ ' + failed + ' without a usable photo · ' : '✓ ') + updated + '/' + keys.length + ' photos updated');
+      var parts = ['✓ ' + updated + '/' + all.length + ' photos updated'];
+      if (noPhoto) parts.push(noPhoto + ' without a usable photo');
+      if (stillUnreachable) parts.push(stillUnreachable + ' couldn’t be reached (built-in photos kept)');
+      setStatus(updated || noPhoto ? parts.join(' · ') : 'Could not reach iNaturalist — showing built-in photos');
     });
   };
 
@@ -2185,12 +2275,13 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
     if (b) b.style.display = show ? 'flex' : 'none';
     if (l && text != null) l.textContent = text;
   }
+  var badSounds = {};                       // recordings that failed to load this visit
   function findSound(k) {
     return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&sounds=true&quality_grade=research&order_by=votes&order=desc&per_page=10')
       .then(function (d) {
         var res = d.results || [];
         for (var i = 0; i < res.length; i++) {
-          var snd = (res[i].sounds || []).filter(function (s) { return s.file_url && USABLE[s.license_code]; })[0];
+          var snd = (res[i].sounds || []).filter(function (s) { return s.file_url && USABLE[s.license_code] && !badSounds[s.file_url]; })[0];
           if (snd) {
             var by = res[i].user ? res[i].user.login : '';
             SOUNDS[k] = snd.file_url; soundBy[k] = by;
@@ -2229,7 +2320,10 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
         if (err && err.name === 'NotAllowedError') bar(true, 'Press ▶ to play ' + nameOf(k));
       });
     }, function () {
-      if (t === token) bar(true, 'Could not reach iNaturalist — sounds need an internet connection');
+      if (t !== token) return;
+      // Couldn't reach iNaturalist: keep the request alive and play as soon as it can.
+      bar(true, 'Can’t reach iNaturalist right now — ' + nameOf(k) + ' will play as soon as the connection is back…');
+      waitOnline(15000).then(function () { if (t === token) window.playCall(k); });
     });
   };
   window.fetchAndPlayAudio = window.playCall;
@@ -2239,9 +2333,17 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
     p.onended = function () { window.stopAudio(); };
     p.onerror = function () {
       if (!p.getAttribute('src') || !playingKey) return;     // cleared on purpose
-      var k = playingKey;
-      delete SOUNDS[k]; store.del(soundKey(k));                // stale link: forget it
-      bar(true, 'That recording is unavailable — tap ' + SOUND + ' to try another');
+      var k = playingKey, bad = p.getAttribute('src');
+      if (navigator.onLine === false) {                         // connection dropped mid-load
+        bar(true, 'Connection lost — ' + nameOf(k) + ' will play when it’s back…');
+        waitOnline().then(function () { if (playingKey === k) window.playCall(k); });
+        return;
+      }
+      badSounds[bad] = true;                                    // dead file: forget it, try the next recording
+      delete SOUNDS[k]; store.del(soundKey(k));
+      var tried = Object.keys(badSounds).length;
+      if (tried <= 20) { bar(true, 'That recording is unavailable — trying another…'); window.playCall(k); }
+      else bar(true, 'Recordings aren’t loading right now — try again later');
     };
   })();
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.stopAudio(); });
@@ -2255,8 +2357,8 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
         .then(function () { done++; setStatus(done + '/' + keys.length + ' sounds checked…'); });
     })).then(function () {
       if (btn) btn.disabled = false;
-      setStatus(failed === keys.length ? 'Could not reach iNaturalist'
-        : '✓ ' + found + '/' + keys.length + ' species have recordings on iNaturalist');
+      setStatus(failed === keys.length ? 'Could not reach iNaturalist — sounds will be looked up when you play them'
+        : '✓ ' + found + '/' + keys.length + ' species have recordings on iNaturalist' + (failed ? ' · ' + failed + ' couldn\u2019t be checked yet (looked up again when played)' : ''));
     });
   };
 
@@ -2271,7 +2373,8 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
     var base = 'Likelihoods use ' + total.toLocaleString() + ' research-grade Louisiana iNaturalist records';
     if (state === 'busy') return 'Updating likelihoods from iNaturalist…';
     if (state === 'live') return base + ' · updated ' + fmtDate(t);
-    if (state === 'offline') return base + ' · built-in counts (offline)';
+    if (state === 'retry') return base + ' · built-in counts — can’t reach iNaturalist right now, will update automatically';
+    if (state === 'retry-saved') return base + ' · saved ' + fmtDate(t) + ' — can’t reach iNaturalist right now, will update automatically';
     return base;
   }
   function note(state, t) {
@@ -2286,7 +2389,7 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
     rerender();
   }
   function fetchCounts() {
-    var byName = {}, counts = {};
+    var byName = {}, counts = {}, missed = 0;
     function page(n) {
       return inat('observations/species_counts?place_id=' + PLACE + '&quality_grade=research&taxon_id=' + CFG.ancestor + '&per_page=500&page=' + n)
         .then(function (d) {
@@ -2302,9 +2405,13 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
       // Names not matched (taxonomy renames, genus-level entries) are looked up one by one.
       return Promise.all(missing.map(function (k) {
         return inat('observations?taxon_name=' + encodeURIComponent(sciOf(k)) + '&place_id=' + PLACE + '&quality_grade=research&per_page=1')
-          .then(function (d) { if (typeof d.total_results === 'number') counts[k] = d.total_results; }, function () {});
+          .then(function (d) { if (typeof d.total_results === 'number') counts[k] = d.total_results; else missed++; }, function (err) {
+            // A 4xx means iNaturalist rejected that name — retrying won't help. Anything else
+            // (network, rate limit, timeout) is worth another try later.
+            if (!/^HTTP 4/.test(err && err.message || '')) missed++;
+          });
       }));
-    }).then(function () { return counts; });
+    }).then(function () { return { counts: counts, missed: missed }; });
   }
   // A count of 0 is real data (no research-grade LA records), not a missing value.
   if (typeof window.rarity === 'function') {
@@ -2314,24 +2421,51 @@ window.ND_GUIDE = {"id": "LouisianaSeabirdsIdentificationKey", "ancestor": 3, "p
       return origRarity.apply(this, arguments);
     };
   }
+  // If an update fails (offline, rate-limited, iNaturalist down) the guide keeps working on the
+  // built-in or saved counts and tries again on its own: when the connection comes back, when
+  // the tab is shown again, and on a backoff timer — so it never needs a manual reload.
+  var PARTIAL_TTL = 30 * 60 * 1000;          // some species missing: try again sooner
+  var RETRY_DELAYS = [20000, 60000, 180000, 600000, 1800000];
+  var retryCount = 0, retryTimer = null;
+  function scheduleCountsRetry() {
+    clearTimeout(retryTimer);
+    var delay = RETRY_DELAYS[Math.min(retryCount, RETRY_DELAYS.length - 1)];
+    retryCount++;
+    retryTimer = setTimeout(function () { updateCounts(false); }, delay);
+  }
+  function retryCountsNow() {
+    if (!retryTimer) return;
+    clearTimeout(retryTimer); retryTimer = null;
+    updateCounts(false);
+  }
+  window.addEventListener('online', retryCountsNow);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') retryCountsNow(); });
+
   var inflight = null;
   function updateCounts(force) {
     if (inflight) return inflight;
     var cached = store.get(countsKey);
     if (cached && cached.counts) applyCounts(cached.counts);
-    if (!force && cached && Date.now() - cached.t < COUNT_TTL) { note('live', cached.t); return Promise.resolve(); }
+    var ttl = cached && cached.partial ? PARTIAL_TTL : COUNT_TTL;
+    if (!force && cached && Date.now() - cached.t < ttl) { note('live', cached.t); return Promise.resolve(); }
+    clearTimeout(retryTimer); retryTimer = null;
     note('busy');
     $$('.refresh-inat-btn').forEach(function (b) { b.disabled = true; });
-    inflight = fetchCounts().then(function (counts) {
-      if (!Object.keys(counts).length) throw new Error('no data');
+    inflight = fetchCounts().then(function (res) {
+      if (!Object.keys(res.counts).length) throw new Error('no data');
+      // Species that didn't answer this time keep their previously saved count.
+      var counts = Object.assign({}, cached && cached.counts, res.counts);
       var t = Date.now();
-      store.set(countsKey, { t: t, counts: counts });
+      store.set(countsKey, { t: t, counts: counts, partial: res.missed > 0 });
       applyCounts(counts);
       note('live', t);
-      if (force) setStatus('✓ Counts updated from iNaturalist');
+      if (res.missed > 0) scheduleCountsRetry();     // fill in the species that didn't answer (backing off)
+      else retryCount = 0;
+      if (force) setStatus(res.missed ? '✓ Counts updated (' + res.missed + ' species will be retried automatically)' : '✓ Counts updated from iNaturalist');
     }).catch(function () {
-      note(cached ? 'live' : 'offline', cached && cached.t);
-      if (force) setStatus('Could not reach iNaturalist — using saved counts');
+      note(cached ? 'retry-saved' : 'retry', cached && cached.t);
+      scheduleCountsRetry();
+      if (force) setStatus('Could not reach iNaturalist — using saved counts and retrying automatically');
     }).then(function () {
       inflight = null;
       $$('.refresh-inat-btn').forEach(function (b) { b.disabled = false; });

@@ -1,0 +1,6 @@
+{
+  "_help": "Client IDs for direct cloud backup on iNaturalistHighlights.html. See CLOUD_SETUP.md. A provider with a blank clientId stays hidden.",
+  "onedrive": { "clientId": "", "tenant": "common" },
+  "gdrive": { "clientId": "" },
+  "dropbox": { "clientId": "" }
+}

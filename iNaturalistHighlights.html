@@ -203,6 +203,21 @@
   .import-choice-state.newer { color: var(--accent); }
   .import-choice-state.older { color: var(--warn); }
   body.drag-import #backupPanel { outline: 3px dashed var(--accent); outline-offset: 4px; }
+  .cloud-panel { margin-top: 14px; }
+  .cloud-title { font-weight: 600; margin-bottom: 8px; }
+  .cloud-providers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+  .cloud-provider { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg); min-width: 0; }
+  .cloud-provider-head { display: flex; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; align-items: baseline; }
+  .cloud-where { font-size: 0.78rem; color: var(--muted); }
+  .cloud-status { font-size: 0.85rem; color: var(--muted); margin: 4px 0 8px; overflow-wrap: anywhere; }
+  .cloud-status strong { color: var(--warn); font-weight: 600; }
+  .cloud-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .cloud-actions button { padding: 6px 12px; font-size: 0.85rem; }
+  .cloud-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; min-height: 40px; padding: 0 4px; cursor: pointer; }
+  .cloud-help { margin-top: 10px; font-size: 0.88rem; }
+  .cloud-help summary { cursor: pointer; color: var(--muted); }
+  .cloud-help ul { margin: 8px 0 0; padding-left: 20px; }
+  .cloud-help li { margin: 6px 0; }
   .usage-section { margin: 18px 0 6px; }
   .usage-section h3 { margin: 0 0 6px; font-size: 1.02rem; }
   .usage-bars { display: grid; gap: 4px; margin: 8px 0; max-width: 560px; }
@@ -721,6 +736,21 @@
       <button id="unlinkFileBtn" class="secondary" style="display:none;">Unlink</button>
       <input type="file" id="importFileInput" accept=".zip,.json,.gz,application/zip,application/json,application/gzip" hidden>
     </div>
+    <div class="cloud-panel">
+      <div id="cloudDirect" style="display:none;">
+        <div class="cloud-title">Cloud backup</div>
+        <div id="cloudProviders" class="cloud-providers"></div>
+      </div>
+      <details class="cloud-help">
+        <summary>Back up to iCloud, OneDrive, Google Drive, Dropbox, Box or another cloud</summary>
+        <ul>
+          <li><strong>Computer, Chrome or Edge (automatic):</strong> install your cloud's desktop app (iCloud for Windows, OneDrive, Google Drive for desktop, Dropbox or Box Drive). Then click <em>Link auto-save file…</em> and save the file inside that cloud folder. Every change is written to it and the cloud app syncs it. On another computer, use <em>Import from file</em> and pick it from the same folder.</li>
+          <li><strong>Computer, any browser:</strong> <em>Export to file</em> opens a Save dialog in Chrome and Edge, so you can pick your cloud folder directly. Other browsers save to Downloads; move the file into your cloud folder.</li>
+          <li><strong>iPhone and iPad:</strong> <em>Share…</em> → <em>Save to Files</em> → iCloud Drive (or OneDrive, Google Drive, Dropbox or Box, if their apps are installed). To restore, <em>Import from file</em> → <em>Browse</em> → the same place.</li>
+          <li><strong>Android:</strong> <em>Share…</em> → Drive, OneDrive, Dropbox or Box. To restore, <em>Import from file</em> and pick the file from that app in the file picker.</li>
+        </ul>
+      </details>
+    </div>
     <details id="exportChooser" class="export-chooser">
       <summary>Sharing options: choose users and places, add your name and a note</summary>
       <div class="share-options">
@@ -756,6 +786,8 @@
   it, or just the users and places you pick) and "Import from file" loads one back, merging with whatever is already
   cached; older .json and .json.gz backups still import. In Chrome/Edge you can also link an auto-save file that is
   rewritten with the full cache about 15 seconds after it changes.
+  Backups can also go to the cloud: OneDrive, Google Drive and Dropbox can be connected directly (when set up), and
+  iCloud, Box and any other service work through their synced folders or the phone share sheet.
 </footer>
 
 <script>
@@ -1211,8 +1243,29 @@
     return `inat-highlights-${safe || 'backup'}-${new Date().toISOString().slice(0, 10)}.${canZip ? 'zip' : 'json'}`;
   }
 
+  // Chrome and Edge show a Save dialog first, so the file can go straight into a OneDrive,
+  // iCloud Drive, Google Drive, Dropbox or Box folder; other browsers download it.
   async function exportBackupDownload(selection, label, extras) {
+    let handle = null;
+    if (canLinkFile) {
+      try {
+        handle = await window.showSaveFilePicker({
+          suggestedName: backupFileName(label),
+          types: [canZip ? { description: 'Backup file', accept: { 'application/zip': ['.zip'] } } : { description: 'Backup file', accept: { 'application/json': ['.json'] } }],
+        });
+      } catch (err) {
+        if (err && err.name === 'AbortError') throw err;
+        handle = null; // no Save dialog here (e.g. inside a frame): fall back to a download
+      }
+    }
     const { blob, summary } = await buildBackup(selection, 'zip', extras);
+    if (handle) {
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      summary.savedTo = handle.name;
+      return summary;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1498,6 +1551,7 @@
   }
 
   function scheduleAutoSave() {
+    scheduleCloudAutoSave();
     if (!linkedFileHandle || importInProgress) return;
     if (autoSaveRunning) { autoSavePendingAgain = true; return; }
     if (autoSaveTimer) return; // already scheduled; fires AUTO_SAVE_DELAY_MS after the first unsaved change
@@ -4741,8 +4795,8 @@
     try {
       const started = performance.now();
       const summary = await exportBackupDownload(chosen && chosen.selection, chosen && chosen.label, shareExtras());
-      setBackupStatus(`Exported ${summarizeBackup(summary)} in ${((performance.now() - started) / 1000).toFixed(1)}s.`);
-    } catch (err) { setBackupStatus(`Export failed: ${err.message}`); }
+      setBackupStatus(`Exported ${summarizeBackup(summary)}${summary.savedTo ? ` to ${summary.savedTo}` : ''} in ${((performance.now() - started) / 1000).toFixed(1)}s.`);
+    } catch (err) { setBackupStatus(err && err.name === 'AbortError' ? 'Export cancelled.' : `Export failed: ${err.message}`); }
   }));
 
   el('importBtn').addEventListener('click', () => el('importFileInput').click());
@@ -4774,6 +4828,417 @@
       setBackupStatus(err && err.name === 'AbortError' ? 'Sharing cancelled.' : `Share failed: ${err.message}`);
     }
   }));
+
+
+  // ---------- Cloud backup: OneDrive, Google Drive, Dropbox ----------
+  // A static GitHub Pages site can't keep a secret, so each provider uses its public-client
+  // sign-in (OAuth with PKCE for OneDrive and Dropbox, Google's browser token flow), with client
+  // IDs from shared/cloud.json. A provider without a client ID stays hidden. iCloud and Box have
+  // no browser API that works without a server; they're covered by synced folders and the share
+  // sheet (see the help text in the panel). Tokens stay in this browser's localStorage.
+  const CLOUD_REDIRECT = new URL('cloud-callback.html', location.href).href.replace(/[?#].*$/, '');
+  const cloudFileName = () => (canZip ? 'inat-highlights-backup.zip' : 'inat-highlights-backup.json');
+  const CLOUD_AUTO_DELAY_MS = 60000;
+  let cloudConfig = {};
+  const cloudBusy = {}; // id -> 'connecting' | 'saving' | 'loading'
+  let cloudAuthCancel = null;
+
+  const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  async function pkcePair() {
+    const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+    return { verifier, challenge };
+  }
+  function cloudGet(id) { try { return JSON.parse(localStorage.getItem(`nd_cloud_${id}`) || 'null') || {}; } catch { return {}; } }
+  function cloudSet(id, rec) { try { if (rec) localStorage.setItem(`nd_cloud_${id}`, JSON.stringify(rec)); else localStorage.removeItem(`nd_cloud_${id}`); } catch {} }
+  const cloudConnected = (rec) => !!(rec && (rec.access || rec.refresh) && !rec.needsReconnect);
+
+  async function cloudJson(r, what) {
+    if (r.ok) return r.json();
+    let msg = '';
+    try { const j = await r.json(); msg = (j.error && (j.error.message || j.error_summary || j.error)) || j.error_description || j.error_summary || ''; } catch {}
+    throw new Error(`${what} failed (${r.status}${msg ? `: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}` : ''})`);
+  }
+
+  const CLOUD_PROVIDERS = {
+    onedrive: {
+      name: 'OneDrive',
+      where: 'OneDrive › Apps › (this app’s folder)',
+      scope: 'Files.ReadWrite.AppFolder User.Read offline_access',
+      authUrl(cfg, pk, state) {
+        return `https://login.microsoftonline.com/${encodeURIComponent(cfg.tenant || 'common')}/oauth2/v2.0/authorize?` + new URLSearchParams({
+          client_id: cfg.clientId, response_type: 'code', redirect_uri: CLOUD_REDIRECT, scope: this.scope,
+          code_challenge: pk.challenge, code_challenge_method: 'S256', state, prompt: 'select_account', response_mode: 'query',
+        });
+      },
+      tokenUrl: (cfg) => `https://login.microsoftonline.com/${encodeURIComponent(cfg.tenant || 'common')}/oauth2/v2.0/token`,
+      tokenExtra() { return { scope: this.scope }; },
+      async account(api) { const j = await cloudJson(await api('https://graph.microsoft.com/v1.0/me'), 'Reading your account'); return j.userPrincipalName || j.mail || j.displayName || ''; },
+      itemUrl: () => `https://graph.microsoft.com/v1.0/me/drive/special/approot:/${encodeURIComponent(cloudFileName())}`,
+      async info(api) {
+        const r = await api(this.itemUrl());
+        if (r.status === 404) return null;
+        const j = await cloudJson(r, 'Checking the backup');
+        return { modified: Date.parse(j.lastModifiedDateTime) || 0, size: j.size || 0, downloadUrl: j['@microsoft.graph.downloadUrl'] };
+      },
+      async upload(api, blob) {
+        // Simple upload handles up to 250 MB; larger files go through an upload session.
+        if (blob.size <= 200 * 1024 * 1024) {
+          const j = await cloudJson(await api(`${this.itemUrl()}:/content`, { method: 'PUT', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob }), 'Uploading');
+          return { modified: Date.parse(j.lastModifiedDateTime) || Date.now() };
+        }
+        const s = await cloudJson(await api(`${this.itemUrl()}:/createUploadSession`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item: { '@microsoft.graph.conflictBehavior': 'replace' } }) }), 'Starting the upload');
+        const chunk = 10 * 320 * 1024;
+        let j = null;
+        for (let start = 0; start < blob.size; start += chunk) {
+          const end = Math.min(blob.size, start + chunk);
+          const r = await fetch(s.uploadUrl, { method: 'PUT', headers: { 'Content-Range': `bytes ${start}-${end - 1}/${blob.size}` }, body: blob.slice(start, end) });
+          if (!r.ok) await cloudJson(r, 'Uploading');
+          if (end === blob.size) j = await r.json();
+        }
+        return { modified: Date.parse(j && j.lastModifiedDateTime) || Date.now() };
+      },
+      async download(api) {
+        const info = await this.info(api);
+        if (!info) return null;
+        const r = await fetch(info.downloadUrl);
+        if (!r.ok) throw new Error(`Downloading failed (${r.status})`);
+        return { blob: await r.blob(), modified: info.modified };
+      },
+    },
+
+    gdrive: {
+      name: 'Google Drive',
+      where: 'Google Drive › My Drive',
+      implicit: true, // Google's browser flow: no refresh token, so sign-in lasts about an hour
+      authUrl(cfg, pk, state, hint) {
+        return 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+          client_id: cfg.clientId, redirect_uri: CLOUD_REDIRECT, response_type: 'token', state,
+          scope: 'https://www.googleapis.com/auth/drive.file', include_granted_scopes: 'true',
+          ...(hint ? { login_hint: hint } : { prompt: 'select_account' }),
+        });
+      },
+      async account(api) { const j = await cloudJson(await api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress,displayName)'), 'Reading your account'); return (j.user && (j.user.emailAddress || j.user.displayName)) || ''; },
+      async find(api) {
+        const q = encodeURIComponent(`name='${cloudFileName()}' and trashed=false`);
+        const j = await cloudJson(await api(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&orderBy=modifiedTime%20desc&pageSize=1&fields=files(id,modifiedTime,size)`), 'Checking the backup');
+        const f = j.files && j.files[0];
+        return f ? { id: f.id, modified: Date.parse(f.modifiedTime) || 0, size: Number(f.size) || 0 } : null;
+      },
+      info(api) { return this.find(api); },
+      async upload(api, blob) {
+        const existing = await this.find(api);
+        let r;
+        if (existing) {
+          r = await api(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media&fields=id,modifiedTime`, { method: 'PATCH', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob });
+        } else {
+          const boundary = `nd${Date.now().toString(36)}`;
+          const meta = JSON.stringify({ name: cloudFileName(), mimeType: blob.type || 'application/octet-stream', description: 'iNaturalist Highlights backup (Louisiana Field Guides)' });
+          const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${blob.type || 'application/octet-stream'}\r\n\r\n`, blob, `\r\n--${boundary}--`]);
+          r = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
+        }
+        const j = await cloudJson(r, 'Uploading');
+        return { modified: Date.parse(j.modifiedTime) || Date.now() };
+      },
+      async download(api) {
+        const f = await this.find(api);
+        if (!f) return null;
+        const r = await api(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`);
+        if (!r.ok) await cloudJson(r, 'Downloading');
+        return { blob: await r.blob(), modified: f.modified };
+      },
+    },
+
+    dropbox: {
+      name: 'Dropbox',
+      where: 'Dropbox › Apps › (this app’s folder)',
+      authUrl(cfg, pk, state) {
+        return 'https://www.dropbox.com/oauth2/authorize?' + new URLSearchParams({
+          client_id: cfg.clientId, response_type: 'code', redirect_uri: CLOUD_REDIRECT, state,
+          code_challenge: pk.challenge, code_challenge_method: 'S256', token_access_type: 'offline',
+        });
+      },
+      tokenUrl: () => 'https://api.dropboxapi.com/oauth2/token',
+      tokenExtra: () => ({}),
+      async account(api) { const j = await cloudJson(await api('https://api.dropboxapi.com/2/users/get_current_account', { method: 'POST' }), 'Reading your account'); return j.email || (j.name && j.name.display_name) || ''; },
+      async info(api) {
+        const r = await api('https://api.dropboxapi.com/2/files/get_metadata', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: `/${cloudFileName()}` }) });
+        if (r.status === 409) return null; // path/not_found
+        const j = await cloudJson(r, 'Checking the backup');
+        return { modified: Date.parse(j.server_modified) || 0, size: j.size || 0 };
+      },
+      async upload(api, blob) {
+        const arg = { path: `/${cloudFileName()}`, mode: 'overwrite', mute: true };
+        if (blob.size <= 140 * 1024 * 1024) {
+          const j = await cloudJson(await api('https://content.dropboxapi.com/2/files/upload', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': JSON.stringify(arg) }, body: blob }), 'Uploading');
+          return { modified: Date.parse(j.server_modified) || Date.now() };
+        }
+        const chunk = 100 * 1024 * 1024;
+        const s = await cloudJson(await api('https://content.dropboxapi.com/2/files/upload_session/start', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': JSON.stringify({ close: false }) }, body: blob.slice(0, chunk) }), 'Uploading');
+        let offset = chunk;
+        for (; offset + chunk < blob.size; offset += chunk) {
+          const r = await api('https://content.dropboxapi.com/2/files/upload_session/append_v2', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': JSON.stringify({ cursor: { session_id: s.session_id, offset }, close: false }) }, body: blob.slice(offset, offset + chunk) });
+          if (!r.ok) await cloudJson(r, 'Uploading');
+        }
+        const j = await cloudJson(await api('https://content.dropboxapi.com/2/files/upload_session/finish', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': JSON.stringify({ cursor: { session_id: s.session_id, offset }, commit: arg }) }, body: blob.slice(offset) }), 'Uploading');
+        return { modified: Date.parse(j.server_modified) || Date.now() };
+      },
+      async download(api) {
+        const r = await api('https://content.dropboxapi.com/2/files/download', { method: 'POST', headers: { 'Dropbox-API-Arg': JSON.stringify({ path: `/${cloudFileName()}` }) } });
+        if (r.status === 409) return null;
+        if (!r.ok) await cloudJson(r, 'Downloading');
+        let modified = 0;
+        try { modified = Date.parse(JSON.parse(r.headers.get('Dropbox-API-Result') || '{}').server_modified) || 0; } catch {}
+        return { blob: await r.blob(), modified };
+      },
+    },
+  };
+
+  const cloudIds = () => Object.keys(CLOUD_PROVIDERS).filter((id) => cloudConfig[id] && cloudConfig[id].clientId);
+
+  // Opens the sign-in pop-up and waits for cloud-callback.html to hand back its URL. The window
+  // is opened before any await so pop-up blockers (Safari especially) see the click.
+  function authPopup(win, url) {
+    return new Promise((resolve, reject) => {
+      try { localStorage.removeItem('nd_cloud_auth'); } catch {}
+      let done = false, bc = null;
+      const cleanup = () => {
+        done = true; clearInterval(timer); clearTimeout(giveUp); cloudAuthCancel = null;
+        window.removeEventListener('message', onMsg); window.removeEventListener('storage', onStorage);
+        try { bc && bc.close(); } catch {}
+        try { localStorage.removeItem('nd_cloud_auth'); } catch {}
+      };
+      const finish = (href) => { if (done) return; cleanup(); try { win.close(); } catch {} resolve(new URL(href)); };
+      const fail = (msg) => { if (done) return; cleanup(); try { win.close(); } catch {} reject(new Error(msg)); };
+      const onMsg = (e) => { if (e.origin === location.origin && e.data && e.data.type === 'nd-cloud-auth') finish(e.data.url); };
+      const onStorage = (e) => { if (e.key === 'nd_cloud_auth' && e.newValue) { try { finish(JSON.parse(e.newValue).url); } catch {} } };
+      window.addEventListener('message', onMsg);
+      window.addEventListener('storage', onStorage);
+      try { bc = new BroadcastChannel('nd-cloud-auth'); bc.onmessage = (e) => onMsg({ origin: location.origin, data: e.data }); } catch {}
+      // Some sign-in pages cut the link to this window, so "closed" can't be trusted to mean the
+      // person gave up; keep listening for a few minutes, with a Cancel button in the panel.
+      const timer = setInterval(() => {
+        try { const v = localStorage.getItem('nd_cloud_auth'); if (v) finish(JSON.parse(v).url); } catch {}
+      }, 700);
+      const giveUp = setTimeout(() => fail('Sign-in timed out.'), 5 * 60 * 1000);
+      cloudAuthCancel = () => fail('Sign-in cancelled.');
+      try { win.location.href = url; } catch { fail('Could not open the sign-in window.'); }
+    });
+  }
+
+  async function cloudTokenRequest(id, params) {
+    const p = CLOUD_PROVIDERS[id], cfg = cloudConfig[id];
+    const r = await fetch(p.tokenUrl(cfg), {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: cfg.clientId, ...p.tokenExtra(), ...params }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.access_token) throw new Error(j.error_description || j.error || `Sign-in failed (${r.status})`);
+    return { access: j.access_token, refresh: j.refresh_token || params.refresh_token || null, expiresAt: Date.now() + ((j.expires_in || 3600) - 60) * 1000 };
+  }
+
+  async function cloudConnect(id) {
+    const p = CLOUD_PROVIDERS[id], cfg = cloudConfig[id];
+    const win = window.open('', 'nd-cloud-auth', 'popup,width=520,height=700');
+    if (!win) throw new Error('The sign-in window was blocked. Allow pop-ups for this site, then try again.');
+    try { win.document.title = `Sign in to ${p.name}`; win.document.body.textContent = `Opening ${p.name} sign-in…`; } catch {}
+    cloudBusy[id] = 'connecting'; renderCloud();
+    try {
+      const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
+      const pk = p.implicit ? null : await pkcePair();
+      const prev = cloudGet(id);
+      const back = await authPopup(win, p.authUrl(cfg, pk, state, prev.account));
+      const params = p.implicit ? new URLSearchParams(back.hash.slice(1)) : back.searchParams;
+      if (params.get('error')) throw new Error(params.get('error_description') || params.get('error'));
+      if (params.get('state') !== state) throw new Error('The sign-in reply did not match this request. Please try again.');
+      const tok = p.implicit
+        ? { access: params.get('access_token'), refresh: null, expiresAt: Date.now() + ((Number(params.get('expires_in')) || 3600) - 60) * 1000 }
+        : await cloudTokenRequest(id, { grant_type: 'authorization_code', code: params.get('code'), redirect_uri: CLOUD_REDIRECT, code_verifier: pk.verifier });
+      cloudSet(id, { ...prev, ...tok, needsReconnect: false });
+      const api = cloudApiFor(id);
+      try { cloudSet(id, { ...cloudGet(id), account: await p.account(api) }); } catch {}
+      setBackupStatus(`Connected to ${p.name}.`);
+      await cloudCheckRemote(id);
+    } finally {
+      delete cloudBusy[id];
+      renderCloud();
+    }
+  }
+
+  async function cloudAccessToken(id) {
+    const rec = cloudGet(id);
+    if (rec.access && Date.now() < (rec.expiresAt || 0)) return rec.access;
+    if (rec.refresh) {
+      try {
+        const t = await cloudTokenRequest(id, { grant_type: 'refresh_token', refresh_token: rec.refresh });
+        cloudSet(id, { ...cloudGet(id), ...t });
+        return t.access;
+      } catch { /* refresh token expired or revoked */ }
+    }
+    if (rec.access || rec.refresh) cloudSet(id, { ...rec, access: null, refresh: null, needsReconnect: true });
+    const err = new Error(`Sign in to ${CLOUD_PROVIDERS[id].name} again to continue.`);
+    err.reconnect = true;
+    throw err;
+  }
+
+  // fetch with the provider's token; a 401 forces one refresh and retry.
+  function cloudApiFor(id) {
+    return async function api(url, opts = {}) {
+      for (let attempt = 0; ; attempt++) {
+        const tok = await cloudAccessToken(id);
+        const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${tok}` } });
+        if (r.status !== 401 || attempt) return r;
+        cloudSet(id, { ...cloudGet(id), expiresAt: 0 });
+      }
+    };
+  }
+
+  async function cloudSave(id, auto) {
+    const p = CLOUD_PROVIDERS[id];
+    if (cloudBusy[id]) return;
+    cloudBusy[id] = 'saving'; renderCloud();
+    try {
+      if (!auto) setBackupStatus(`Preparing backup for ${p.name}…`);
+      const { blob, summary } = await buildBackup(null, canZip ? 'zip' : 'json');
+      setBackupStatus(`${auto ? 'Auto-saving' : 'Uploading'} to ${p.name} (${formatBytes(blob.size)})…`);
+      const res = await p.upload(cloudApiFor(id), blob);
+      cloudSet(id, { ...cloudGet(id), lastSaved: res.modified || Date.now(), remoteModified: res.modified || Date.now() });
+      setBackupStatus(`${auto ? 'Auto-saved' : 'Saved'} ${summarizeBackup(summary)} to ${p.name} at ${new Date().toLocaleTimeString()}.`);
+    } catch (err) {
+      setBackupStatus(`${auto ? 'Auto-save' : 'Saving'} to ${p.name} failed: ${err.message}`);
+      if (!auto && !err.reconnect) throw err;
+    } finally {
+      delete cloudBusy[id];
+      renderCloud();
+    }
+  }
+
+  async function cloudLoad(id) {
+    const p = CLOUD_PROVIDERS[id];
+    cloudBusy[id] = 'loading'; renderCloud();
+    try {
+      setBackupStatus(`Downloading the backup from ${p.name}…`);
+      const got = await p.download(cloudApiFor(id));
+      if (!got) { setBackupStatus(`There's no backup in ${p.name} yet. Use "Save now" first.`); return; }
+      cloudSet(id, { ...cloudGet(id), remoteModified: got.modified || 0, lastLoaded: got.modified || Date.now() });
+      await showImportPreview(new File([got.blob], `${cloudFileName()} from ${p.name}`, { type: got.blob.type || 'application/zip' }));
+    } catch (err) {
+      setBackupStatus(`Loading from ${p.name} failed: ${err.message}`);
+    } finally {
+      delete cloudBusy[id];
+      renderCloud();
+    }
+  }
+
+  // Notices a backup saved from another device so the panel can offer to load it.
+  async function cloudCheckRemote(id) {
+    const rec = cloudGet(id);
+    if (!cloudConnected(rec)) return;
+    try {
+      const info = await CLOUD_PROVIDERS[id].info(cloudApiFor(id));
+      cloudSet(id, { ...cloudGet(id), remoteModified: info ? info.modified : 0, remoteSize: info ? info.size : 0 });
+    } catch { /* offline, or needs reconnecting; renderCloud shows that */ }
+    renderCloud();
+  }
+
+  let cloudAutoTimer = null;
+  function scheduleCloudAutoSave() {
+    if (importInProgress || cloudAutoTimer) return;
+    if (!cloudIds().some((id) => cloudGet(id).auto && cloudConnected(cloudGet(id)))) return;
+    cloudAutoTimer = setTimeout(async () => {
+      cloudAutoTimer = null;
+      for (const id of cloudIds()) {
+        const rec = cloudGet(id);
+        if (rec.auto && cloudConnected(rec)) await cloudSave(id, true);
+      }
+    }, CLOUD_AUTO_DELAY_MS);
+  }
+
+  const fmtWhen = (t) => (t ? new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+
+  function renderCloud() {
+    const box = el('cloudProviders');
+    if (!box) return;
+    const ids = cloudIds();
+    el('cloudDirect').style.display = ids.length ? '' : 'none';
+    box.innerHTML = ids.map((id) => {
+      const p = CLOUD_PROVIDERS[id], rec = cloudGet(id), busy = cloudBusy[id];
+      const on = cloudConnected(rec);
+      let status;
+      if (busy === 'connecting') status = 'Finish signing in in the pop-up window…';
+      else if (busy === 'saving') status = 'Saving…';
+      else if (busy === 'loading') status = 'Downloading…';
+      else if (rec.needsReconnect) status = `Signed out${rec.account ? ` (${escapeHtml(rec.account)})` : ''} — connect again to keep saving.`;
+      else if (!on) status = 'Not connected.';
+      else {
+        const parts = [`Connected${rec.account ? ` as ${escapeHtml(rec.account)}` : ''}.`];
+        if (rec.lastSaved) parts.push(`Last saved from here ${fmtWhen(rec.lastSaved)}.`);
+        if (rec.remoteModified && rec.remoteModified > Math.max(rec.lastSaved || 0, rec.lastLoaded || 0) + 60000) parts.push(`<strong>A newer backup (${fmtWhen(rec.remoteModified)}) is in ${p.name} — use Load to bring it in.</strong>`);
+        else if (rec.remoteModified === 0) parts.push('No backup saved there yet.');
+        status = parts.join(' ');
+      }
+      const btn = (action, label, cls = 'secondary') => `<button type="button" class="${cls}" data-cloud-action="${action}" data-cloud-id="${id}"${busy && action !== 'cancel' ? ' disabled' : ''}>${label}</button>`;
+      const actions = busy === 'connecting'
+        ? btn('cancel', 'Cancel')
+        : on
+          ? `${btn('save', 'Save now', '')}${btn('load', 'Load backup')}<label class="cloud-auto"><input type="checkbox" data-cloud-auto="${id}"${rec.auto ? ' checked' : ''}${busy ? ' disabled' : ''}> Auto-save</label>${btn('disconnect', 'Disconnect')}`
+          : btn('connect', rec.needsReconnect ? 'Reconnect' : `Connect ${p.name}`, '');
+      return `<div class="cloud-provider" data-provider="${id}">
+          <div class="cloud-provider-head"><strong>${p.name}</strong><span class="cloud-where">${escapeHtml(p.where)}</span></div>
+          <div class="cloud-status">${status}</div>
+          <div class="cloud-actions">${actions}</div>
+        </div>`;
+    }).join('');
+  }
+
+  el('cloudProviders').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-cloud-action]');
+    if (!b) return;
+    const id = b.dataset.cloudId, action = b.dataset.cloudAction, name = CLOUD_PROVIDERS[id].name;
+    try {
+      if (action === 'connect') await cloudConnect(id);
+      else if (action === 'cancel') { if (cloudAuthCancel) cloudAuthCancel(); }
+      else if (action === 'save') await cloudSave(id, false);
+      else if (action === 'load') await cloudLoad(id);
+      else if (action === 'disconnect') {
+        const rec = cloudGet(id);
+        cloudSet(id, null);
+        // Dropbox can revoke the token outright; the others expire on their own.
+        if (id === 'dropbox' && rec.access) fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: `Bearer ${rec.access}` } }).catch(() => {});
+        setBackupStatus(`Disconnected from ${name}. The backup already saved there is untouched.`);
+        renderCloud();
+      }
+    } catch (err) {
+      setBackupStatus(`${name}: ${err.message}`);
+      renderCloud();
+    }
+  });
+  el('cloudProviders').addEventListener('change', (e) => {
+    const cb = e.target.closest('[data-cloud-auto]');
+    if (!cb) return;
+    const id = cb.dataset.cloudAuto;
+    cloudSet(id, { ...cloudGet(id), auto: cb.checked });
+    if (cb.checked) { setBackupStatus(`Auto-save to ${CLOUD_PROVIDERS[id].name} is on: changes are uploaded about a minute after they happen.`); cloudSave(id, true); }
+  });
+
+  (async () => {
+    if (!/^https?:$/.test(location.protocol) || !window.crypto || !crypto.subtle) return; // needs a web address (not a file opened from disk)
+    try {
+      const r = await fetch(new URL('shared/cloud.json', location.href), { cache: 'no-cache' });
+      if (r.ok) cloudConfig = await r.json();
+    } catch { /* no config: only the universal options show */ }
+    renderCloud();
+    for (const id of cloudIds()) cloudCheckRemote(id);
+  })();
+  const cloudCheckedAt = {};
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    for (const id of cloudIds()) {
+      if (cloudBusy[id] || Date.now() - (cloudCheckedAt[id] || 0) < 120000) continue;
+      cloudCheckedAt[id] = Date.now();
+      cloudCheckRemote(id);
+    }
+  });
 
   let pendingImport = null;
 

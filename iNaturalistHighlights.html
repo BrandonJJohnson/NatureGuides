@@ -457,6 +457,84 @@
     font-size: 0.78rem;
   }
   a { color: var(--accent); }
+
+  /* ---- Overview, Top Observers and Compare ---- */
+  .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 18px 32px; }
+  .overview-grid section { min-width: 0; }
+  .overview-grid h3 { margin: 0 0 8px; font-size: 1rem; }
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; margin: 0; font-size: 0.9rem; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+  .muted-note { color: var(--muted); font-size: 0.82rem; margin: 6px 0 0; }
+  .compare-form { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+  .compare-form .autocomplete-wrap input { width: 100%; }
+  .compare-vs { color: var(--muted); font-weight: 700; text-align: center; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 12px; }
+  .chip { background: var(--badge-bg); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; font-size: 0.86rem; font-weight: 600; }
+  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 8px 0 4px; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+  .compare-table th, .compare-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+  .compare-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+  .compare-table th:first-child, .compare-table td:first-child { text-align: left; }
+  .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .card-actions button, .card-actions a.secondary { padding: 5px 10px; font-size: 0.8rem; min-height: 32px; }
+  div.obs-card:hover { border-color: var(--border); }
+  .obs-rank { font-weight: 700; color: var(--muted); min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .obs-thumb.round { border-radius: 50%; }
+  .group-breakdown { margin-top: 12px; font-size: 0.88rem; }
+  .group-breakdown summary { cursor: pointer; color: var(--muted); }
+  .api-wait { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 500;
+    background: var(--panel); color: var(--text); border: 1px solid var(--warn); border-radius: 999px; box-shadow: var(--shadow);
+    padding: 8px 16px; font-size: 0.85rem; max-width: calc(100vw - 24px); text-align: center; }
+  .api-wait[hidden] { display: none; }
+
+  /* ---- One layout for every screen size: the same tabs, cards and controls, just reflowed ---- */
+  input[type="text"], input[type="number"], select, textarea { font-size: 1rem; }
+  button, a.secondary { min-height: 40px; touch-action: manipulation; }
+  select { min-height: 38px; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .tabs { scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs.more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+  .tabs.more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+  .tabs.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+  .tab-btn, .mode-btn, .place-tab-btn { flex: none; white-space: nowrap; }
+  .mode-tabs .mode-btn { flex: 1 1 0; }
+  .obs-name { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .obs-meta { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .usage-bar { grid-template-columns: minmax(0, 150px) minmax(40px, 1fr) max-content; }
+  .usage-bar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { white-space: normal; }
+  @media (max-width: 640px) {
+    header { padding: 18px 16px 8px; }
+    header h1 { font-size: 1.35rem; }
+    header p.sub { font-size: 0.88rem; }
+    main { padding: 0 10px 40px; }
+    footer { padding: 10px 16px 32px; }
+    .panel { padding: 14px 12px; border-radius: 10px; margin-bottom: 12px; }
+    .search-row { gap: 8px; }
+    input[type="text"]#username, input[type="text"]#placeQuery { flex: 1 1 100%; min-width: 0; }
+    .search-row > button, .report-row > button { flex: 1 1 auto; padding: 9px 10px; }
+    .report-label { flex: 1 1 100%; }
+    .autocomplete-list { width: 100%; }
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .stat-card { padding: 10px 12px; }
+    .stat-card .num { font-size: 1.25rem; }
+    .tabs { margin-left: -12px; margin-right: -12px; padding: 0 6px; }
+    .tab-btn, .mode-btn, .place-tab-btn { padding: 10px 11px; font-size: 0.88rem; }
+    .list-controls { gap: 8px; }
+    .list-controls label { flex: 1 1 140px; }
+    .list-controls select { flex: 1; min-width: 0; }
+    .pagination { justify-content: center; }
+    .page-nav { width: 100%; justify-content: space-between; }
+    .obs-card { gap: 10px; padding: 8px; }
+    .obs-thumb { width: 52px; height: 52px; }
+    .compare-form { grid-template-columns: 1fr; }
+    .compare-vs { display: none; }
+    .usage-bar { grid-template-columns: minmax(0, 38%) minmax(30px, 1fr) max-content; font-size: 0.82rem; }
+    .share-options { grid-template-columns: 1fr; }
+  }
 </style>
 
 <!--nd:begin head--><style>
@@ -540,7 +618,8 @@
 
       <div class="panel">
         <div class="tabs">
-          <button class="tab-btn active" data-tab="lifers">New Species</button>
+          <button class="tab-btn active" data-tab="overview">Overview</button>
+          <button class="tab-btn" data-tab="lifers">New Species</button>
           <button class="tab-btn" data-tab="country">Country Firsts</button>
           <button class="tab-btn" data-tab="state">State Firsts</button>
           <button class="tab-btn" data-tab="county">County / Parish Firsts</button>
@@ -549,11 +628,12 @@
           <button class="tab-btn" data-tab="usage">Usage Beyond iNaturalist</button>
         </div>
 
-        <div class="filter-row">
+        <div class="filter-row" id="userFilterRow" style="display:none;">
           <input type="text" id="filterInput" placeholder="Filter by species name...">
         </div>
 
-        <div class="tab-panel active" id="tab-lifers"></div>
+        <div class="tab-panel active" id="tab-overview"></div>
+        <div class="tab-panel" id="tab-lifers"></div>
         <div class="tab-panel" id="tab-country"></div>
         <div class="tab-panel" id="tab-state"></div>
         <div class="tab-panel" id="tab-county"></div>
@@ -581,6 +661,7 @@
     <div id="placeResults" style="display:none;">
       <div class="panel">
         <div class="stat-grid" id="placeStatGrid"></div>
+        <div id="placeGroupBreakdown"></div>
         <div class="report-row">
           <span class="report-label">Report</span>
           <button class="secondary" data-report="place" data-format="html" title="A standalone page with this place's notable species, first finders and full species list. Open it in any browser or print it to PDF.">Download report</button>
@@ -594,6 +675,8 @@
           <button class="place-tab-btn active" data-place-tab="species">Species List</button>
           <button class="place-tab-btn" data-place-tab="notable">Notable Finds</button>
           <button class="place-tab-btn" data-place-tab="records">Species Records (First Found)</button>
+          <button class="place-tab-btn" data-place-tab="observers">Top Observers</button>
+          <button class="place-tab-btn" data-place-tab="compare">Compare Observers</button>
         </div>
 
         <div class="filter-row">
@@ -603,6 +686,26 @@
         <div class="tab-panel active" id="tab-place-species"></div>
         <div class="tab-panel" id="tab-place-notable"></div>
         <div class="tab-panel" id="tab-place-records"></div>
+        <div class="tab-panel" id="tab-place-observers"></div>
+        <div class="tab-panel" id="tab-place-compare">
+          <div class="compare-form">
+            <div class="autocomplete-wrap">
+              <input type="text" id="compareA" placeholder="First observer (login)" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="compareASuggestions" aria-expanded="false" aria-label="First observer">
+              <div class="autocomplete-list" id="compareASuggestions" role="listbox" style="display:none;"></div>
+            </div>
+            <span class="compare-vs">vs</span>
+            <div class="autocomplete-wrap">
+              <input type="text" id="compareB" placeholder="Second observer (login)" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="compareBSuggestions" aria-expanded="false" aria-label="Second observer">
+              <div class="autocomplete-list" id="compareBSuggestions" role="listbox" style="display:none;"></div>
+            </div>
+            <div class="search-row">
+              <button id="compareBtn">Compare</button>
+              <button id="compareSwapBtn" class="secondary" title="Swap the two observers">⇄</button>
+            </div>
+          </div>
+          <div class="status-line" id="compareStatusLine"></div>
+          <div id="compareResults"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -647,6 +750,8 @@
   "Full Resync" clears everything for that place.
   "Download report" saves what's loaded for a user or place as a standalone page you can share or print to PDF, and
   "Download spreadsheet" saves the same rows as a CSV.
+  For a place, "Top Observers" ranks who has the most observations or species there, and "Compare Observers" sets two
+  people's species lists for that place side by side (only one, both, or neither yet), with a CSV download.
   Because browser storage can be wiped, "Export to file" saves the cache as a compact .zip backup file (all of
   it, or just the users and places you pick) and "Import from file" loads one back, merging with whatever is already
   cached; older .json and .json.gz backups still import. In Chrome/Edge you can also link an auto-save file that is
@@ -687,6 +792,19 @@
     return slot;
   }
 
+  // A small notice at the bottom of the screen while requests are waiting out a rate limit, so a
+  // slow load reads as "waiting" rather than "stuck".
+  let apiWaitTimer = null;
+  function apiWaitNotice(ms) {
+    let n = document.getElementById('apiWaitNote');
+    if (!ms) { if (n) n.hidden = true; clearInterval(apiWaitTimer); apiWaitTimer = null; return; }
+    if (!n) { n = document.createElement('div'); n.id = 'apiWaitNote'; n.className = 'api-wait'; n.setAttribute('role', 'status'); document.body.appendChild(n); }
+    const until = Date.now() + ms;
+    const tick = () => { if (Date.now() > until + 8000) { apiWaitNotice(0); return; } n.textContent = `iNaturalist is busy — retrying automatically in ${Math.max(1, Math.ceil((until - Date.now()) / 1000))}s…`; };
+    tick(); n.hidden = false;
+    clearInterval(apiWaitTimer); apiWaitTimer = setInterval(tick, 1000);
+  }
+
   async function throttledFetch(url, isCancelled) {
     if (isCancelled()) throw new Error('Cancelled');
     await waitForRequestSlot();
@@ -699,8 +817,9 @@
       try { res = await fetch(url); } catch (networkErr) { res = null; }
       if (!res || res.status === 429 || res.status === 503) {
         attempt++;
-        if (attempt > 5) throw new Error(res ? 'iNaturalist API is rate-limiting us. Try again shortly.' : 'Could not reach iNaturalist (network error or rate limit).');
-        const backoff = 3000 * attempt;
+        if (attempt > 8) { apiWaitNotice(0); throw new Error(res ? 'iNaturalist API is rate-limiting us. Try again shortly.' : 'Could not reach iNaturalist (network error or rate limit).'); }
+        const backoff = Math.min(30000, 3000 * attempt);
+        apiWaitNotice(backoff);
         // Push the shared clock forward so every background job backs off together, instead of
         // the others continuing to hit the API while this one waits.
         lastRequestAt = Math.max(lastRequestAt, Date.now() + backoff);
@@ -710,6 +829,7 @@
         await waitForRequestSlot();
         continue;
       }
+      if (attempt) apiWaitNotice(0);
       if (!res.ok) {
         if (res.status === 404) throw new Error('Not found.');
         throw new Error(`API error ${res.status}`);
@@ -1592,6 +1712,7 @@
       preferred_common_name: t.preferred_common_name || null,
       rank: t.rank,
       rank_level: t.rank_level,
+      iconic_taxon_name: t.iconic_taxon_name || null,
       threatened: t.threatened === true,
       default_photo: t.default_photo && t.default_photo.square_url ? { square_url: t.default_photo.square_url } : null,
       conservation_status: t.conservation_status ? { status_name: t.conservation_status.status_name || null } : null,
@@ -1648,6 +1769,7 @@
     const usernameKey = username.toLowerCase();
     const touched = [];
     let idAbove = 0;
+    let expected = 0; // total_results shrinks as id_above advances, so remember the first page's total
     while (true) {
       if (myGen !== currentGeneration) break;
       const url = `${API_BASE}/observations?user_login=${encodeURIComponent(username)}&per_page=${PAGE_SIZE}&order=asc&order_by=id&id_above=${idAbove}${extraQuery}`;
@@ -1660,7 +1782,8 @@
       // store is keyed by observation id, this also naturally upserts edited observations.
       await putObservationsBatch(db, usernameKey, trimmed);
       idAbove = data.results[data.results.length - 1].id;
-      onProgress(touched.length, data.total_results || touched.length);
+      if (!expected) expected = data.total_results || 0;
+      onProgress(touched.length, Math.max(expected, touched.length));
       if (data.results.length < PAGE_SIZE) break;
     }
     return touched;
@@ -2247,7 +2370,7 @@
     currentPlace: null, // { id, name, display_name, admin_level }
     speciesList: [], // [{ taxonId, taxon, count }]
     totalObservations: 0,
-    listControls: freshListControls(['species', 'notable', 'records'], 'count_desc'),
+    listControls: freshListControls(['species', 'notable', 'records', 'compare'], 'count_desc'),
     recordResults: {}, // placeRecordKey -> { status: 'pending'|'done'|'error', obsId, user, date }
   };
 
@@ -2747,6 +2870,7 @@
 
   function renderAll() {
     renderStats();
+    renderOverview();
     renderLifers();
     renderPlaceFirsts('country');
     renderPlaceFirsts('state');
@@ -2806,6 +2930,8 @@
       { label: 'Total Observations', num: placeState.totalObservations },
       { label: 'Species Recorded', num: placeState.speciesList.length },
       { label: 'Notable Species', num: placeNotableList().length },
+      ...(observersState.placeId === (placeState.currentPlace && placeState.currentPlace.id) && observersState.total
+        ? [{ label: 'Observers', num: observersState.total }] : []),
     ];
   }
 
@@ -2886,6 +3012,10 @@
 
   function renderPlaceAll() {
     renderPlaceStats();
+    renderPlaceGroups();
+    renderCompare();
+    renderPlaceObservers();
+    if (el('tab-place-observers').classList.contains('active')) loadObservers(false);
     renderPlaceSpecies();
     renderPlaceNotable();
     renderPlaceRecords();
@@ -3532,9 +3662,10 @@
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+      el('results').querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
       el(`tab-${btn.dataset.tab}`).classList.add('active');
+      el('userFilterRow').style.display = ['overview', 'usage'].includes(btn.dataset.tab) ? 'none' : '';
     });
   });
 
@@ -3633,12 +3764,15 @@
       el('placeSearchPanel').querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
       el(`tab-place-${btn.dataset.placeTab}`).classList.add('active');
+      el('placeFilterInput').placeholder = btn.dataset.placeTab === 'observers' ? 'Filter by observer name...' : 'Filter by species name...';
+      if (btn.dataset.placeTab === 'observers') loadObservers(false);
     });
   });
 
   function rerenderPlaceTab(tab) {
     if (tab === 'species') renderPlaceSpecies();
     else if (tab === 'notable') renderPlaceNotable();
+    else if (tab === 'compare') renderCompare();
     else renderPlaceRecords();
   }
 
@@ -3647,6 +3781,8 @@
     renderPlaceSpecies();
     renderPlaceNotable();
     renderPlaceRecords();
+    renderCompare();
+    renderPlaceObservers();
   });
 
   document.addEventListener('change', (e) => {
@@ -3858,6 +3994,402 @@
       el('placeResults').style.display = mode === 'place' && placeState.currentPlace ? '' : 'none';
     });
   });
+
+  for (const id of ['compareA', 'compareB']) {
+    createAutocomplete({
+      input: el(id),
+      list: el(id + 'Suggestions'),
+      savedItems: savedUsers,
+      textOf: (u) => `${u.login} ${u.name}`,
+      keyOf: (u) => u.login.toLowerCase(),
+      fetchRemote: autocompleteUsers,
+      itemHtml: (u, saved) => {
+        const icon = u.icon ? `<img class="ac-icon" src="${escapeHtml(u.icon)}" alt="" loading="lazy">` : '<span class="ac-icon"></span>';
+        const sub = saved ? `${plural(u.count, 'observation')} saved` : [u.name, plural(u.count, 'observation')].filter(Boolean).join(' · ');
+        return `${icon}<div class="ac-text"><div class="ac-main"><strong>${escapeHtml(u.login)}</strong></div><div class="ac-sub">${escapeHtml(sub)}</div></div>`;
+      },
+      onPick: (u) => { el(id).value = u.login; },
+    });
+  }
+
+  // Scrollable tab strips: fade whichever edge has more tabs hidden past it, and keep the active tab in view.
+  function updateTabFades(strip) {
+    const max = strip.scrollWidth - strip.clientWidth;
+    strip.classList.toggle('more-left', strip.scrollLeft > 2);
+    strip.classList.toggle('more-right', max > 2 && strip.scrollLeft < max - 2);
+  }
+  function revealActiveTabs() {
+    document.querySelectorAll('.tabs').forEach((strip) => {
+      const act = strip.querySelector('.active');
+      if (act && strip.clientWidth) strip.scrollLeft = Math.max(0, act.offsetLeft - strip.offsetLeft - (strip.clientWidth - act.offsetWidth) / 2);
+      updateTabFades(strip);
+    });
+  }
+  document.querySelectorAll('.tabs').forEach((strip) => strip.addEventListener('scroll', () => updateTabFades(strip), { passive: true }));
+  window.addEventListener('resize', () => requestAnimationFrame(revealActiveTabs));
+  document.addEventListener('click', (e) => { if (e.target.closest('.tab-btn, .mode-btn, .place-tab-btn')) requestAnimationFrame(revealActiveTabs); });
+  { const mo = new MutationObserver(() => requestAnimationFrame(revealActiveTabs)); ['results', 'placeResults', 'userSearchPanel', 'placeSearchPanel'].forEach((id) => mo.observe(el(id), { attributes: true, attributeFilter: ['style'] })); }
+
+  // ---------- Overview (user), species groups, Top Observers and Compare (place) ----------
+
+  const ICONIC_LABELS = {
+    Aves: 'Birds', Plantae: 'Plants', Insecta: 'Insects', Fungi: 'Fungi', Reptilia: 'Reptiles', Amphibia: 'Amphibians',
+    Mammalia: 'Mammals', Actinopterygii: 'Ray-finned fishes', Mollusca: 'Mollusks', Arachnida: 'Arachnids',
+    Animalia: 'Other animals', Chromista: 'Kelp, diatoms & allies', Protozoa: 'Protozoans',
+  };
+  function iconicOf(taxon) {
+    if (!taxon) return null;
+    if (taxon.iconic_taxon_name) return taxon.iconic_taxon_name;
+    const info = taxonInfo.get(taxon.id);
+    return (info && info.iconic) || null;
+  }
+  function groupLabel(iconic) { return iconic ? (ICONIC_LABELS[iconic] || iconic) : 'Other / not yet known'; }
+  function groupCounts(taxa) {
+    const m = new Map();
+    for (const t of taxa) { const g = groupLabel(iconicOf(t)); m.set(g, (m.get(g) || 0) + 1); }
+    return [...m.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n);
+  }
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fmtDate = (iso) => { if (!iso) return '—'; const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); };
+  const pct = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : '—');
+
+  function renderOverview() {
+    const box = el('tab-overview');
+    if (!box) return;
+    const obs = state.observations;
+    if (!obs.length) { box.innerHTML = '<div class="empty-msg">No observations loaded.</div>'; return; }
+    const dates = obs.map((o) => o.observed_on).filter(Boolean).sort();
+    const first = dates[0], last = dates[dates.length - 1];
+    const days = new Map(); // date -> Set of species
+    const perSpecies = new Map(); // taxonId -> { taxon, n, first }
+    const years = new Map(), months = new Array(12).fill(0);
+    const quality = { research: 0, needs_id: 0, casual: 0 };
+    let obscured = 0;
+    for (const o of obs) {
+      if (o.quality_grade in quality) quality[o.quality_grade]++;
+      if (['obscured', 'private'].includes(o.geoprivacy) || ['obscured', 'private'].includes(o.taxon_geoprivacy)) obscured++;
+      if (o.observed_on) {
+        const y = o.observed_on.slice(0, 4), m = parseInt(o.observed_on.slice(5, 7), 10) - 1;
+        years.set(y, (years.get(y) || 0) + 1);
+        if (m >= 0 && m < 12) months[m]++;
+      }
+      if (!isSpeciesRank(o.taxon)) continue;
+      const rec = perSpecies.get(o.taxon.id) || { taxon: o.taxon, n: 0 };
+      rec.n++;
+      perSpecies.set(o.taxon.id, rec);
+      if (o.observed_on) {
+        if (!days.has(o.observed_on)) days.set(o.observed_on, new Set());
+        days.get(o.observed_on).add(o.taxon.id);
+      }
+    }
+    let bestDay = null;
+    for (const [d, set] of days) if (!bestDay || set.size > bestDay.n) bestDay = { d, n: set.size };
+    const activeDays = new Set(dates).size;
+    const singletons = [...perSpecies.values()].filter((r) => r.n === 1).length;
+    const span = first && last ? Math.max(1, Math.round((new Date(last) - new Date(first)) / (365.25 * 864e5) * 10) / 10) : 0;
+    const counties = new Map();
+    for (const o of obs) { const c = getObsPlaceOfLevel(o, state.placeCache, 'county'); if (c) counties.set(c.name, (counties.get(c.name) || 0) + 1); }
+    const yearItems = [...years.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([label, n]) => ({ label, n }));
+    const topSpecies = [...perSpecies.values()].sort((a, b) => b.n - a.n).slice(0, 10);
+    const groups = groupCounts([...perSpecies.values()].map((r) => r.taxon));
+    const unknownGroups = groups.find((g) => g.label === groupLabel(null));
+    const u = encodeURIComponent(state.currentUsername);
+    box.innerHTML = `<div class="overview-grid">
+      <section><h3>Activity</h3><dl class="facts">
+        <dt>First observation</dt><dd>${fmtDate(first)}</dd>
+        <dt>Latest observation</dt><dd>${fmtDate(last)}</dd>
+        <dt>Years observing</dt><dd>${span ? span.toLocaleString() : '—'}</dd>
+        <dt>Days in the field</dt><dd>${activeDays.toLocaleString()}</dd>
+        <dt>Observations per field day</dt><dd>${activeDays ? (Math.round((obs.length / activeDays) * 10) / 10).toLocaleString() : '—'}</dd>
+        <dt>Best day</dt><dd>${bestDay ? `${bestDay.n.toLocaleString()} species on <a href="https://www.inaturalist.org/observations?user_id=${u}&on=${bestDay.d}" target="_blank" rel="noopener">${fmtDate(bestDay.d)}</a>` : '—'}</dd>
+        <dt>Species seen only once</dt><dd>${singletons.toLocaleString()} (${pct(singletons, perSpecies.size)})</dd>
+      </dl></section>
+      <section><h3>Data quality</h3><dl class="facts">
+        <dt>Research Grade</dt><dd>${quality.research.toLocaleString()} (${pct(quality.research, obs.length)})</dd>
+        <dt>Needs ID</dt><dd>${quality.needs_id.toLocaleString()} (${pct(quality.needs_id, obs.length)})</dd>
+        <dt>Casual</dt><dd>${quality.casual.toLocaleString()} (${pct(quality.casual, obs.length)})</dd>
+        <dt>Location obscured</dt><dd>${obscured.toLocaleString()} (${pct(obscured, obs.length)})</dd>
+      </dl>
+      <p class="muted-note"><a href="https://www.inaturalist.org/observations/identify?user_id=${u}&quality_grade=needs_id" target="_blank" rel="noopener">Help identify this user's Needs ID observations ↗</a></p></section>
+      <section><h3>Species by group</h3>${usageBarsHtml(groups, 14)}${unknownGroups ? '<p class="muted-note">Use Refresh to fill in groups for observations cached before this was tracked.</p>' : ''}</section>
+      <section><h3>Most-observed species</h3>${usageBarsHtml(topSpecies.map((r) => ({ label: taxonName(r.taxon), n: r.n })), 10)}</section>
+      <section><h3>Observations by year</h3>${usageBarsHtml(yearItems, 30)}</section>
+      <section><h3>Observations by month (all years)</h3>${usageBarsHtml(MONTHS.map((label, i) => ({ label, n: months[i] })), 12)}</section>
+      ${counties.size ? `<section><h3>Top counties / parishes</h3>${usageBarsHtml([...counties.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n), 10)}</section>` : ''}
+    </div>`;
+  }
+
+  function renderPlaceGroups() {
+    const box = el('placeGroupBreakdown');
+    if (!box) return;
+    const species = placeState.speciesList.filter((e) => isSpeciesRank(e.taxon));
+    if (!species.length) { box.innerHTML = ''; return; }
+    const wasOpen = box.querySelector('details') && box.querySelector('details').open;
+    box.innerHTML = `<details class="group-breakdown"${wasOpen ? ' open' : ''}><summary>Species by group</summary>${usageBarsHtml(groupCounts(species.map((e) => e.taxon)), 16)}</details>`;
+  }
+
+  // --- Top Observers: who has the most observations / species in this place ---
+  const observersState = { placeId: null, order: 'observation_count', list: [], total: 0, loading: false, error: '' };
+
+  async function loadObservers(force) {
+    const place = placeState.currentPlace;
+    if (!place) return;
+    if (!force && observersState.placeId === place.id && (observersState.list.length || observersState.loading)) return;
+    Object.assign(observersState, { placeId: place.id, list: [], total: 0, loading: true, error: '' });
+    renderPlaceObservers();
+    const myPlace = place.id, myOrder = observersState.order;
+    const stale = () => observersState.placeId !== myPlace || observersState.order !== myOrder;
+    try {
+      const data = await throttledFetch(`${API_BASE}/observations/observers?place_id=${myPlace}&verifiable=true&per_page=100&order_by=${myOrder}`, stale);
+      if (stale()) return;
+      observersState.list = (data.results || []).map((r) => ({
+        login: r.user ? r.user.login : String(r.user_id), name: (r.user && r.user.name) || '',
+        icon: (r.user && (r.user.icon_url || r.user.icon)) || '', obs: r.observation_count || 0, species: r.species_count || 0,
+      }));
+      observersState.total = data.total_results || observersState.list.length;
+    } catch (e) {
+      if (stale()) return;
+      observersState.error = e.message;
+    }
+    observersState.loading = false;
+    renderPlaceObservers();
+    renderPlaceStats();
+  }
+
+  function renderPlaceObservers() {
+    const box = el('tab-place-observers');
+    if (!box) return;
+    const place = placeState.currentPlace;
+    if (!place) { box.innerHTML = ''; return; }
+    const head = `<div class="list-controls"><label>Rank by
+        <select id="observersOrder">
+          <option value="observation_count"${observersState.order === 'observation_count' ? ' selected' : ''}>Observations</option>
+          <option value="species_count"${observersState.order === 'species_count' ? ' selected' : ''}>Species</option>
+        </select></label></div>`;
+    if (observersState.placeId !== place.id || observersState.loading) { box.innerHTML = head + '<div class="empty-msg">Loading observers…</div>'; return; }
+    if (observersState.error) { box.innerHTML = head + `<div class="empty-msg">Could not load observers: ${escapeHtml(observersState.error)} <button class="secondary" id="observersRetry">Try again</button></div>`; return; }
+    const filterText = el('placeFilterInput').value.trim().toLowerCase();
+    const rows = observersState.list.map((o, i) => ({ ...o, rank: i + 1 }))
+      .filter((o) => !filterText || o.login.toLowerCase().includes(filterText) || o.name.toLowerCase().includes(filterText));
+    box.innerHTML = head +
+      `<p class="muted-note" style="margin:0 0 10px;">${observersState.total.toLocaleString()} people have verifiable observations in ${escapeHtml(place.display_name || place.name)}. Showing the top ${observersState.list.length}. The filter box above matches names here.</p>` +
+      (rows.length ? `<div class="card-list">${rows.map((o) => `
+        <div class="obs-card">
+          <span class="obs-rank">${o.rank}</span>
+          ${o.icon ? `<img class="obs-thumb round" src="${escapeHtml(o.icon)}" alt="" loading="lazy">` : '<div class="obs-thumb round"></div>'}
+          <div class="obs-info">
+            <div class="obs-name"><a href="https://www.inaturalist.org/people/${encodeURIComponent(o.login)}" target="_blank" rel="noopener">${escapeHtml(o.login)}</a>${o.name ? ` <span class="obs-sci" style="font-style:normal">${escapeHtml(o.name)}</span>` : ''}</div>
+            <div class="obs-meta"><a href="https://www.inaturalist.org/observations?place_id=${place.id}&user_id=${encodeURIComponent(o.login)}&verifiable=true" target="_blank" rel="noopener">${o.obs.toLocaleString()} observations</a> · <a href="https://www.inaturalist.org/observations?place_id=${place.id}&user_id=${encodeURIComponent(o.login)}&verifiable=true&view=species" target="_blank" rel="noopener">${o.species.toLocaleString()} species</a></div>
+            <div class="card-actions">
+              <button class="secondary" data-compare-set="A" data-login="${escapeHtml(o.login)}">Compare as 1st</button>
+              <button class="secondary" data-compare-set="B" data-login="${escapeHtml(o.login)}">Compare as 2nd</button>
+            </div>
+          </div>
+        </div>`).join('')}</div>` : '<div class="empty-msg">No observers match the filter.</div>');
+  }
+
+  // --- Compare: two observers' species lists in this place ---
+  const compareState = { placeId: null, a: '', b: '', listA: null, listB: null, view: 'onlyA', running: false, error: '', gen: 0 };
+  const compareListCache = new Map(); // `${placeId}|${login}` -> { at, list }
+  const COMPARE_CACHE_MS = 30 * 60 * 1000;
+
+  async function fetchUserPlaceSpecies(placeId, login, isCancelled, onProgress) {
+    const key = `${placeId}|${login.toLowerCase()}`;
+    const hit = compareListCache.get(key);
+    if (hit && Date.now() - hit.at < COMPARE_CACHE_MS) return hit.list;
+    const out = [];
+    for (let page = 1; page <= 20; page++) {
+      const data = await throttledFetch(`${API_BASE}/observations/species_counts?place_id=${placeId}&user_id=${encodeURIComponent(login)}&per_page=500&page=${page}`, isCancelled);
+      for (const r of data.results || []) if (isSpeciesRank(r.taxon)) out.push({ taxonId: r.taxon.id, taxon: trimTaxon(r.taxon), count: r.count });
+      if (onProgress) onProgress(out.length, data.total_results || 0);
+      if (!data.results || data.results.length < 500) break;
+    }
+    compareListCache.set(key, { at: Date.now(), list: out });
+    return out;
+  }
+
+  function setCompareStatus(t) { const n = el('compareStatusLine'); if (n) n.textContent = t; }
+
+  async function runCompare() {
+    const place = placeState.currentPlace;
+    const a = el('compareA').value.trim().replace(/^@/, ''), b = el('compareB').value.trim().replace(/^@/, '');
+    if (!place) return;
+    if (!a || !b) { setCompareStatus('Enter two iNaturalist logins to compare.'); return; }
+    if (a.toLowerCase() === b.toLowerCase()) { setCompareStatus('Pick two different observers.'); return; }
+    const gen = ++compareState.gen;
+    const isCancelled = () => gen !== compareState.gen;
+    Object.assign(compareState, { placeId: place.id, a, b, listA: null, listB: null, running: true, error: '' });
+    placeState.listControls.compare.page = 1;
+    el('compareBtn').disabled = true;
+    renderCompare();
+    try { localStorage.setItem('inat_compare_pair', JSON.stringify([a, b])); } catch {}
+    try {
+      setCompareStatus(`Fetching ${a}'s species in ${place.display_name || place.name}…`);
+      const listA = await fetchUserPlaceSpecies(place.id, a, isCancelled, (n) => setCompareStatus(`Fetching ${a}'s species… ${n.toLocaleString()}`));
+      setCompareStatus(`Fetching ${b}'s species…`);
+      const listB = await fetchUserPlaceSpecies(place.id, b, isCancelled, (n) => setCompareStatus(`Fetching ${b}'s species… ${n.toLocaleString()}`));
+      if (isCancelled()) return;
+      Object.assign(compareState, { listA, listB });
+      const empty = [!listA.length && a, !listB.length && b].filter(Boolean);
+      setCompareStatus(empty.length ? `No species-level observations here for ${empty.join(' or ')} — check the spelling of the login.` : '');
+    } catch (e) {
+      if (isCancelled()) return;
+      compareState.error = e.message;
+      setCompareStatus(`Could not compare: ${e.message}`);
+    } finally {
+      if (!isCancelled()) { compareState.running = false; el('compareBtn').disabled = false; renderCompare(); }
+    }
+  }
+
+  function compareRows() {
+    const { listA, listB } = compareState;
+    const mA = new Map(listA.map((e) => [e.taxonId, e])), mB = new Map(listB.map((e) => [e.taxonId, e]));
+    const placeCounts = new Map(placeState.speciesList.map((e) => [e.taxonId, e.count]));
+    const rows = new Map();
+    const add = (e) => { if (!rows.has(e.taxonId)) rows.set(e.taxonId, { taxonId: e.taxonId, taxon: e.taxon, a: (mA.get(e.taxonId) || {}).count || 0, b: (mB.get(e.taxonId) || {}).count || 0, place: placeCounts.get(e.taxonId) || 0 }); };
+    listA.forEach(add); listB.forEach(add);
+    const neither = placeState.speciesList.filter((e) => isSpeciesRank(e.taxon) && !mA.has(e.taxonId) && !mB.has(e.taxonId))
+      .map((e) => ({ taxonId: e.taxonId, taxon: e.taxon, a: 0, b: 0, place: e.count }));
+    const all = [...rows.values()];
+    return { onlyA: all.filter((r) => r.a && !r.b), onlyB: all.filter((r) => r.b && !r.a), both: all.filter((r) => r.a && r.b), neither, union: all };
+  }
+
+  const COMPARE_SORT_OPTIONS = [
+    { value: 'count_desc', label: 'Observations (most first)' },
+    { value: 'count_asc', label: 'Observations (fewest first)' },
+    { value: 'name_asc', label: 'Name (A–Z)' },
+    { value: 'name_desc', label: 'Name (Z–A)' },
+    { value: 'rarity_asc', label: 'Rarest in this place first' },
+  ];
+
+  function compareCardHtml(r) {
+    const t = r.taxon, place = placeState.currentPlace;
+    const common = taxonName(t), img = photoUrl(t);
+    const users = [r.a ? compareState.a : null, r.b ? compareState.b : null].filter(Boolean);
+    const href = `https://www.inaturalist.org/observations?place_id=${place.id}&taxon_id=${t.id}${users.length ? `&user_id=${encodeURIComponent(users.join(','))}` : ''}&verifiable=any`;
+    return `
+      <a class="obs-card" href="${href}" target="_blank" rel="noopener">
+        ${img ? `<img class="obs-thumb" src="${img}" alt="" loading="lazy">` : '<div class="obs-thumb"></div>'}
+        <div class="obs-info">
+          <div class="obs-name">${escapeHtml(common)}${common !== t.name ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
+          <div class="obs-meta">${escapeHtml(compareState.a)}: ${r.a.toLocaleString()} · ${escapeHtml(compareState.b)}: ${r.b.toLocaleString()} · ${r.place.toLocaleString()} in this place overall</div>
+          ${r.place && r.place <= 5 ? '<div class="badge-row"><span class="badge warn">Rare here</span></div>' : ''}
+        </div>
+      </a>`;
+  }
+
+  function renderCompare() {
+    const box = el('compareResults');
+    if (!box) return;
+    const place = placeState.currentPlace;
+    if (!place || compareState.placeId !== place.id) {
+      box.innerHTML = '<p class="muted-note">Compare two people\'s species lists for this place: what each has found that the other hasn\'t, what they share, and which of the place\'s species neither has seen yet. Pick names here or use "Compare" on the Top Observers tab.</p>';
+      return;
+    }
+    if (compareState.running) { box.innerHTML = '<div class="empty-msg">Comparing…</div>'; return; }
+    if (!compareState.listA || !compareState.listB) { box.innerHTML = ''; return; }
+    const { a, b } = compareState;
+    const sets = compareRows();
+    const union = sets.union.length;
+    const stats = [
+      { label: `${a} species`, num: compareState.listA.length },
+      { label: `${b} species`, num: compareState.listB.length },
+      { label: 'Seen by both', num: sets.both.length },
+      { label: `Only ${a}`, num: sets.onlyA.length },
+      { label: `Only ${b}`, num: sets.onlyB.length },
+      { label: 'Overlap (shared ÷ combined)', num: pct(sets.both.length, union) },
+      { label: 'Combined species', num: union },
+      { label: 'Place species neither has', num: sets.neither.length },
+    ];
+    // Group table: what each person has per group, and how much of the place's list that covers.
+    const groups = new Map();
+    const bump = (taxon, key) => { const g = groupLabel(iconicOf(taxon)); const row = groups.get(g) || { a: 0, b: 0, both: 0, place: 0 }; row[key]++; groups.set(g, row); };
+    compareState.listA.forEach((e) => bump(e.taxon, 'a'));
+    compareState.listB.forEach((e) => bump(e.taxon, 'b'));
+    sets.both.forEach((e) => bump(e.taxon, 'both'));
+    placeState.speciesList.filter((e) => isSpeciesRank(e.taxon)).forEach((e) => bump(e.taxon, 'place'));
+    const groupRows = [...groups.entries()].filter(([, r]) => r.a || r.b).sort((x, y) => (y[1].a + y[1].b) - (x[1].a + x[1].b));
+    const views = [
+      { key: 'onlyA', label: `Only ${a}`, n: sets.onlyA.length },
+      { key: 'onlyB', label: `Only ${b}`, n: sets.onlyB.length },
+      { key: 'both', label: 'Both', n: sets.both.length },
+      { key: 'neither', label: 'Neither yet', n: sets.neither.length },
+    ];
+    const filterText = el('placeFilterInput').value;
+    const items = sets[compareState.view].filter((r) => matchesFilter(r.taxon, filterText));
+    const controls = placeState.listControls.compare;
+    const { pageItems, totalPages, totalCount } = paginateAndSort(items, controls, {
+      nameFn: (r) => taxonName(r.taxon).toLowerCase(),
+      countFn: (r) => (compareState.view === 'neither' ? r.place : r.a + r.b),
+      rarityFn: (r) => r.place || 1e12,
+    });
+    const ids = [...new Set(items.map((r) => r.taxonId))];
+    const linkScope = { place_id: place.id };
+    if (compareState.view === 'onlyA') linkScope.user_id = a;
+    else if (compareState.view === 'onlyB') linkScope.user_id = b;
+    else if (compareState.view === 'both') linkScope.user_id = `${a},${b}`;
+    const viewLink = ids.length && compareState.view !== 'neither'
+      ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(inatTaxaUrl(linkScope, ids))}" target="_blank" rel="noopener">View these on iNaturalist${ids.length > MAX_LINK_TAXA ? ` (first ${MAX_LINK_TAXA.toLocaleString()})` : ''} ↗</a></div>` : '';
+    box.innerHTML = `
+      <div class="stat-grid" style="margin-top:12px;">${stats.map((s) => `<div class="stat-card"><div class="num">${typeof s.num === 'number' ? s.num.toLocaleString() : s.num}</div><div class="label">${escapeHtml(s.label)}</div></div>`).join('')}</div>
+      <details class="group-breakdown"><summary>By group</summary><div class="table-scroll"><table class="compare-table">
+        <thead><tr><th>Group</th><th>${escapeHtml(a)}</th><th>${escapeHtml(b)}</th><th>Both</th><th>In place</th></tr></thead>
+        <tbody>${groupRows.map(([g, r]) => `<tr><td>${escapeHtml(g)}</td><td>${r.a.toLocaleString()}</td><td>${r.b.toLocaleString()}</td><td>${r.both.toLocaleString()}</td><td>${r.place.toLocaleString()}</td></tr>`).join('')}</tbody>
+      </table></div></details>
+      <div class="chip-row" role="tablist">${views.map((v) => `<button class="chip${v.key === compareState.view ? ' active' : ''}" data-compare-view="${v.key}" role="tab" aria-selected="${v.key === compareState.view}">${escapeHtml(v.label)} · ${v.n.toLocaleString()}</button>`).join('')}</div>
+      ${listControlsHtml('place', 'compare', COMPARE_SORT_OPTIONS, controls)}
+      <div class="report-row" style="margin-top:0;margin-bottom:12px;"><button class="secondary" id="compareCsvBtn">Download comparison (CSV)</button></div>
+      ${viewLink}
+      ${totalCount ? `<div class="card-list">${pageItems.map(compareCardHtml).join('')}</div>${paginationHtml('place', 'compare', totalPages, totalCount, controls)}` : '<div class="empty-msg">No species in this view.</div>'}`;
+  }
+
+  function downloadCompareCsv() {
+    const place = placeState.currentPlace;
+    const { a, b } = compareState;
+    const sets = compareRows();
+    const label = { onlyA: `Only ${a}`, onlyB: `Only ${b}`, both: 'Both', neither: 'Neither' };
+    const rows = [['Category', 'Common name', 'Scientific name', 'Group', `${a} observations`, `${b} observations`, 'Observations in place', 'Taxon ID']];
+    for (const key of ['onlyA', 'onlyB', 'both', 'neither']) {
+      for (const r of sets[key]) rows.push([label[key], r.taxon.preferred_common_name || '', r.taxon.name, groupLabel(iconicOf(r.taxon)), r.a, r.b, r.place, r.taxonId]);
+    }
+    downloadFile(`compare-${slugify(a)}-${slugify(b)}-${slugify(place.display_name || place.name)}.csv`, '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n', 'text/csv;charset=utf-8');
+  }
+
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-compare-view]');
+    if (chip) { compareState.view = chip.dataset.compareView; placeState.listControls.compare.page = 1; renderCompare(); return; }
+    if (e.target.closest('#compareCsvBtn')) { downloadCompareCsv(); return; }
+    if (e.target.closest('#observersRetry')) { loadObservers(true); return; }
+    const setBtn = e.target.closest('[data-compare-set]');
+    if (setBtn) {
+      el(setBtn.dataset.compareSet === 'A' ? 'compareA' : 'compareB').value = setBtn.dataset.login;
+      if (el('compareA').value.trim() && el('compareB').value.trim()) {
+        document.querySelector('.place-tab-btn[data-place-tab="compare"]').click();
+        runCompare();
+      } else {
+        setBtn.textContent = 'Added ✓ — now pick the other';
+      }
+    }
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'observersOrder') { observersState.order = e.target.value; loadObservers(true); }
+  });
+  el('compareBtn').addEventListener('click', runCompare);
+  el('compareSwapBtn').addEventListener('click', () => {
+    const a = el('compareA').value; el('compareA').value = el('compareB').value; el('compareB').value = a;
+    if (compareState.listA && compareState.listB) {
+      Object.assign(compareState, { a: compareState.b, b: compareState.a, listA: compareState.listB, listB: compareState.listA,
+        view: { onlyA: 'onlyB', onlyB: 'onlyA' }[compareState.view] || compareState.view });
+      renderCompare();
+    }
+  });
+  for (const id of ['compareA', 'compareB']) {
+    el(id).addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.defaultPrevented) runCompare(); });
+  }
+  try {
+    const pair = JSON.parse(localStorage.getItem('inat_compare_pair') || 'null');
+    if (Array.isArray(pair)) { el('compareA').value = pair[0] || ''; el('compareB').value = pair[1] || ''; }
+  } catch {}
 
   function setStatus(text) { el('statusLine').textContent = text; }
   function setProgress(fraction) {

@@ -214,6 +214,37 @@
   .cloud-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .cloud-actions button { padding: 6px 12px; font-size: 0.85rem; }
   .cloud-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; min-height: 40px; padding: 0 4px; cursor: pointer; }
+  dialog.wizard { width: min(620px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); padding: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); color: var(--text); box-shadow: 0 12px 48px rgba(0,0,0,0.35); }
+  dialog.wizard[open] { display: flex; flex-direction: column; }
+  dialog.wizard::backdrop { background: rgba(0,0,0,0.5); }
+  .wiz-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 18px; border-bottom: 1px solid var(--border); }
+  .wiz-head strong { flex: 1; font-size: 1.05rem; }
+  .wiz-x { padding: 4px 12px; min-height: 36px; }
+  .wiz-dots { display: flex; gap: 6px; }
+  .wiz-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .wiz-dots span.on { background: var(--accent); }
+  .wiz-body { padding: 14px 18px; overflow-y: auto; flex: 1; font-size: 0.93rem; line-height: 1.5; }
+  .wiz-body h3 { margin: 2px 0 10px; font-size: 1.1rem; }
+  .wiz-body ol { padding-left: 22px; margin: 8px 0; }
+  .wiz-body li { margin: 4px 0; }
+  .wiz-step-label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .wiz-link { margin: 6px 0 10px; }
+  .copy-field { display: flex; gap: 6px; align-items: stretch; margin: 6px 0 10px; }
+  .copy-field code { flex: 1; min-width: 0; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; }
+  .copy-field button { flex: none; padding: 6px 12px; font-size: 0.82rem; }
+  .wiz-field { display: flex; flex-direction: column; gap: 6px; margin: 12px 0 4px; font-weight: 600; font-size: 0.9rem; }
+  .wiz-field input { width: 100%; font-weight: 400; }
+  .wiz-adv { margin: 8px 0; font-size: 0.88rem; }
+  .wiz-adv summary { cursor: pointer; color: var(--muted); }
+  .wiz-error { color: var(--danger); font-size: 0.88rem; min-height: 1.2em; margin-top: 6px; }
+  .wiz-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 12px 14px; border-top: 1px solid var(--border); }
+  .wiz-foot-left, .wiz-foot-right { display: flex; gap: 8px; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    dialog.wizard { width: 100vw; max-width: 100vw; max-height: 100dvh; height: 100dvh; margin: 0; border-radius: 0; border: none; }
+    .wiz-foot { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    .wiz-foot-left, .wiz-foot-right { flex: 1 1 auto; }
+    .wiz-foot button { flex: 1 1 auto; }
+  }
   .cloud-help { margin-top: 10px; font-size: 0.88rem; }
   .cloud-help summary { cursor: pointer; color: var(--muted); }
   .cloud-help ul { margin: 8px 0 0; padding-left: 20px; }
@@ -741,6 +772,15 @@
         <div class="cloud-title">Cloud backup</div>
         <div id="cloudProviders" class="cloud-providers"></div>
       </div>
+      <div id="cloudUnavailable" class="status-line" style="display:none;">Connecting OneDrive, Google Drive or Dropbox needs this page opened from its web address (not a file on your computer).</div>
+      <dialog id="cloudWizard" class="wizard" aria-labelledby="wizTitle">
+        <div class="wiz-head"><strong id="wizTitle">Set up</strong><div class="wiz-dots" id="wizDots"></div><button type="button" class="secondary wiz-x" id="wizClose" aria-label="Close">✕</button></div>
+        <div class="wiz-body" id="wizBody"></div>
+        <div class="wiz-foot">
+          <div class="wiz-foot-left"><button type="button" class="secondary" id="wizBack">Back</button><button type="button" class="secondary" id="wizRemove" style="display:none;">Remove setup</button></div>
+          <div class="wiz-foot-right"><button type="button" class="secondary" id="wizSkip" title="Already have an ID? Jump to the last step">I have an ID</button><button type="button" id="wizNext">Next</button></div>
+        </div>
+      </dialog>
       <details class="cloud-help">
         <summary>Back up to iCloud, OneDrive, Google Drive, Dropbox, Box or another cloud</summary>
         <ul>
@@ -786,7 +826,8 @@
   it, or just the users and places you pick) and "Import from file" loads one back, merging with whatever is already
   cached; older .json and .json.gz backups still import. In Chrome/Edge you can also link an auto-save file that is
   rewritten with the full cache about 15 seconds after it changes.
-  Backups can also go to the cloud: OneDrive, Google Drive and Dropbox can be connected directly (when set up), and
+  Backups can also go to the cloud: OneDrive, Google Drive and Dropbox connect directly after a one-time setup guide in
+  the backup panel (the setup is kept in this browser and travels inside backup files), and
   iCloud, Box and any other service work through their synced folders or the phone share sheet.
 </footer>
 
@@ -1203,6 +1244,7 @@
       exportedAt: new Date().toISOString(),
       ...(extras && extras.sharedBy ? { sharedBy: String(extras.sharedBy).slice(0, 80) } : {}),
       ...(extras && extras.note ? { note: String(extras.note).slice(0, 2000) } : {}),
+      ...cloudSetupForBackup(),
       taxonDict: toTable(dict.list),
       adminPlaces: toTable(selection ? adminPlaces.filter((p) => usedAdminPlaces.has(p.id)) : adminPlaces),
       taxonInfo: toTable(selection ? taxonInfoAll.filter((t) => usedTaxa.has(t.id)) : taxonInfoAll),
@@ -1368,6 +1410,7 @@
       exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : null,
       sharedBy: typeof data.sharedBy === 'string' ? data.sharedBy.slice(0, 80) : '',
       note: typeof data.note === 'string' ? data.note.slice(0, 2000) : '',
+      cloudSetup: sanitizeCloudSetup(data.cloudSetup),
       decoded,
       users: [...users.values()].sort((a, b) => a.username.localeCompare(b.username)),
       places: [...places.values()].sort((a, b) => String(a.meta && a.meta.placeName || a.placeId).localeCompare(String(b.meta && b.meta.placeName || b.placeId))),
@@ -4839,7 +4882,43 @@
   const CLOUD_REDIRECT = new URL('cloud-callback.html', location.href).href.replace(/[?#].*$/, '');
   const cloudFileName = () => (canZip ? 'inat-highlights-backup.zip' : 'inat-highlights-backup.json');
   const CLOUD_AUTO_DELAY_MS = 60000;
-  let cloudConfig = {};
+  let siteCloudConfig = {}; // optional defaults from shared/cloud.json
+  let userCloudConfig = {}; // this browser's own setup (from the wizard or an imported backup)
+  let cloudAvailable = false;
+  const cloudCfg = (id) => {
+    const own = userCloudConfig[id], site = siteCloudConfig[id];
+    if (own && own.clientId) return own;
+    if (site && site.clientId) return site;
+    return null;
+  };
+  // Only client IDs travel in backup files: they identify the app registration, aren't secret,
+  // and let another device (or a friend on this same site) connect without redoing the wizard.
+  // Sign-in tokens never leave this browser.
+  const CLOUD_ID_PATTERNS = {
+    onedrive: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    gdrive: /^[0-9a-z-]+\.apps\.googleusercontent\.com$/i,
+    dropbox: /^[a-z0-9]{8,32}$/i,
+  };
+  function sanitizeCloudSetup(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    for (const id of Object.keys(CLOUD_ID_PATTERNS)) {
+      const c = raw[id];
+      if (!c || typeof c.clientId !== 'string') continue;
+      const clientId = c.clientId.trim();
+      if (!CLOUD_ID_PATTERNS[id].test(clientId)) continue;
+      out[id] = { clientId, ...(id === 'onedrive' ? { tenant: /^[\w.-]{1,64}$/.test(c.tenant || '') ? c.tenant : 'common' } : {}), setupAt: typeof c.setupAt === 'string' ? c.setupAt : null };
+    }
+    return out;
+  }
+  function cloudSetupForBackup() {
+    const setup = sanitizeCloudSetup(userCloudConfig);
+    return Object.keys(setup).length ? { cloudSetup: setup } : {};
+  }
+  async function saveUserCloudConfig() {
+    await settingsSet('cloudClients', sanitizeCloudSetup(userCloudConfig));
+    scheduleAutoSave(); // linked files and cloud backups pick up the new setup
+  }
   const cloudBusy = {}; // id -> 'connecting' | 'saving' | 'loading'
   let cloudAuthCancel = null;
 
@@ -4994,7 +5073,7 @@
     },
   };
 
-  const cloudIds = () => Object.keys(CLOUD_PROVIDERS).filter((id) => cloudConfig[id] && cloudConfig[id].clientId);
+  const cloudIds = () => Object.keys(CLOUD_PROVIDERS).filter((id) => cloudCfg(id));
 
   // Opens the sign-in pop-up and waits for cloud-callback.html to hand back its URL. The window
   // is opened before any await so pop-up blockers (Safari especially) see the click.
@@ -5027,7 +5106,7 @@
   }
 
   async function cloudTokenRequest(id, params) {
-    const p = CLOUD_PROVIDERS[id], cfg = cloudConfig[id];
+    const p = CLOUD_PROVIDERS[id], cfg = cloudCfg(id);
     const r = await fetch(p.tokenUrl(cfg), {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ client_id: cfg.clientId, ...p.tokenExtra(), ...params }),
@@ -5038,7 +5117,7 @@
   }
 
   async function cloudConnect(id) {
-    const p = CLOUD_PROVIDERS[id], cfg = cloudConfig[id];
+    const p = CLOUD_PROVIDERS[id], cfg = cloudCfg(id);
     const win = window.open('', 'nd-cloud-auth', 'popup,width=520,height=700');
     if (!win) throw new Error('The sign-in window was blocked. Allow pop-ups for this site, then try again.');
     try { win.document.title = `Sign in to ${p.name}`; win.document.body.textContent = `Opening ${p.name} sign-in…`; } catch {}
@@ -5159,30 +5238,32 @@
   function renderCloud() {
     const box = el('cloudProviders');
     if (!box) return;
-    const ids = cloudIds();
-    el('cloudDirect').style.display = ids.length ? '' : 'none';
-    box.innerHTML = ids.map((id) => {
-      const p = CLOUD_PROVIDERS[id], rec = cloudGet(id), busy = cloudBusy[id];
-      const on = cloudConnected(rec);
+    el('cloudDirect').style.display = cloudAvailable ? '' : 'none';
+    el('cloudUnavailable').style.display = cloudAvailable ? 'none' : '';
+    box.innerHTML = Object.keys(CLOUD_PROVIDERS).map((id) => {
+      const p = CLOUD_PROVIDERS[id], rec = cloudGet(id), busy = cloudBusy[id], cfg = cloudCfg(id);
+      const on = !!cfg && cloudConnected(rec);
+      const own = !!(userCloudConfig[id] && userCloudConfig[id].clientId);
       let status;
-      if (busy === 'connecting') status = 'Finish signing in in the pop-up window…';
+      if (!cfg) status = `Not set up yet. The setup guide walks you through a free ${p.name} app registration (about 5 minutes, once).`;
+      else if (busy === 'connecting') status = 'Finish signing in in the pop-up window…';
       else if (busy === 'saving') status = 'Saving…';
       else if (busy === 'loading') status = 'Downloading…';
-      else if (rec.needsReconnect) status = `Signed out${rec.account ? ` (${escapeHtml(rec.account)})` : ''} — connect again to keep saving.`;
-      else if (!on) status = 'Not connected.';
+      else if (rec.needsReconnect) status = `Signed out${rec.account ? ` (${escapeHtml(rec.account)})` : ''}. Connect again to keep saving.`;
+      else if (!on) status = `Set up${own ? '' : ' by this site'}. Not connected yet.`;
       else {
         const parts = [`Connected${rec.account ? ` as ${escapeHtml(rec.account)}` : ''}.`];
         if (rec.lastSaved) parts.push(`Last saved from here ${fmtWhen(rec.lastSaved)}.`);
-        if (rec.remoteModified && rec.remoteModified > Math.max(rec.lastSaved || 0, rec.lastLoaded || 0) + 60000) parts.push(`<strong>A newer backup (${fmtWhen(rec.remoteModified)}) is in ${p.name} — use Load to bring it in.</strong>`);
+        if (rec.remoteModified && rec.remoteModified > Math.max(rec.lastSaved || 0, rec.lastLoaded || 0) + 60000) parts.push(`<strong>A newer backup (${fmtWhen(rec.remoteModified)}) is in ${p.name}. Use Load backup to bring it in.</strong>`);
         else if (rec.remoteModified === 0) parts.push('No backup saved there yet.');
         status = parts.join(' ');
       }
       const btn = (action, label, cls = 'secondary') => `<button type="button" class="${cls}" data-cloud-action="${action}" data-cloud-id="${id}"${busy && action !== 'cancel' ? ' disabled' : ''}>${label}</button>`;
-      const actions = busy === 'connecting'
-        ? btn('cancel', 'Cancel')
-        : on
-          ? `${btn('save', 'Save now', '')}${btn('load', 'Load backup')}<label class="cloud-auto"><input type="checkbox" data-cloud-auto="${id}"${rec.auto ? ' checked' : ''}${busy ? ' disabled' : ''}> Auto-save</label>${btn('disconnect', 'Disconnect')}`
-          : btn('connect', rec.needsReconnect ? 'Reconnect' : `Connect ${p.name}`, '');
+      let actions;
+      if (!cfg) actions = btn('setup', `Set up ${p.name}`, '');
+      else if (busy === 'connecting') actions = btn('cancel', 'Cancel');
+      else if (on) actions = `${btn('save', 'Save now', '')}${btn('load', 'Load backup')}<label class="cloud-auto"><input type="checkbox" data-cloud-auto="${id}"${rec.auto ? ' checked' : ''}${busy ? ' disabled' : ''}> Auto-save</label>${btn('disconnect', 'Disconnect')}${btn('setup', 'Setup')}`;
+      else actions = `${btn('connect', rec.needsReconnect ? 'Reconnect' : `Connect ${p.name}`, '')}${btn('setup', own ? 'Edit setup' : 'Setup')}`;
       return `<div class="cloud-provider" data-provider="${id}">
           <div class="cloud-provider-head"><strong>${p.name}</strong><span class="cloud-where">${escapeHtml(p.where)}</span></div>
           <div class="cloud-status">${status}</div>
@@ -5191,12 +5272,118 @@
     }).join('');
   }
 
+  // ---------- Setup wizard: one guided registration per provider ----------
+  const copyField = (text, label) => `<div class="copy-field"><code>${escapeHtml(text)}</code><button type="button" class="secondary" data-copy="${escapeHtml(text)}" aria-label="Copy ${escapeHtml(label || text)}">Copy</button></div>`;
+  const extLink = (href, text) => `<a class="secondary wiz-link" href="${href}" target="_blank" rel="noopener">${text} ↗</a>`;
+  function wizardSteps(id) {
+    const redirect = copyField(CLOUD_REDIRECT, 'redirect URI');
+    const origin = copyField(location.origin, 'site address');
+    const steps = {
+      onedrive: [
+        { title: 'Open Microsoft app registrations', html: `<p>Sign in with the Microsoft account whose OneDrive you want to use. Personal Outlook/Hotmail accounts and work or school accounts both work.</p>${extLink('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', 'Open App registrations')}<p class="muted-note">If Microsoft asks you to create a free Azure account or directory first, follow its prompts. Registering an app costs nothing.</p>` },
+        { title: 'Register the app', html: `<ol><li>Click <strong>New registration</strong>.</li><li>Name: anything, e.g. <em>Louisiana Field Guides</em>.</li><li>Supported account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong>.</li><li>Redirect URI: choose the platform <strong>Single-page application (SPA)</strong> (not “Web”) and paste:</li></ol>${redirect}<p>Then click <strong>Register</strong>.</p>` },
+        { title: 'Allow OneDrive access', html: `<ol><li>Open <strong>API permissions</strong> → <strong>Add a permission</strong> → <strong>Microsoft Graph</strong> → <strong>Delegated permissions</strong>.</li><li>Tick these three, then <strong>Add permissions</strong>:</li></ol>${copyField('Files.ReadWrite.AppFolder')}${copyField('User.Read')}${copyField('offline_access')}<p class="muted-note">Files.ReadWrite.AppFolder only reaches this app's own folder (OneDrive › Apps), never your other files.</p>` },
+        { title: 'Copy the client ID', html: `<p>Go back to <strong>Overview</strong> and copy the <strong>Application (client) ID</strong>. It looks like <code>1a2b3c4d-…-…</code>.</p>`, field: true },
+      ],
+      gdrive: [
+        { title: 'Create a Google Cloud project', html: `<p>Sign in with the Google account whose Drive you want to use, then create a project (any name).</p>${extLink('https://console.cloud.google.com/projectcreate', 'Create a project')}` },
+        { title: 'Turn on the Drive API', html: `<p>With the new project selected, click <strong>Enable</strong>.</p>${extLink('https://console.cloud.google.com/apis/library/drive.googleapis.com', 'Google Drive API')}` },
+        { title: 'Set up the sign-in screen', html: `${extLink('https://console.cloud.google.com/auth/overview', 'Open Google Auth Platform')}<ol><li>Click <strong>Get started</strong>. Enter an app name and your email, choose <strong>External</strong>, then finish.</li><li><strong>Data access</strong> → <strong>Add or remove scopes</strong>, add this one, then save:</li></ol>${copyField('https://www.googleapis.com/auth/drive.file', 'Drive scope')}<ol start="3"><li><strong>Audience</strong>: add your Gmail address under <strong>Test users</strong>, or click <strong>Publish app</strong> so anyone can sign in.</li></ol><p class="muted-note">drive.file only lets this page see files it created itself.</p>` },
+        { title: 'Create the client', html: `${extLink('https://console.cloud.google.com/auth/clients/create', 'Create OAuth client')}<ol><li>Application type: <strong>Web application</strong>.</li><li><strong>Authorized JavaScript origins</strong>: add</li></ol>${origin}<ol start="3"><li><strong>Authorized redirect URIs</strong>: add</li></ol>${redirect}<p>Click <strong>Create</strong>.</p>` },
+        { title: 'Copy the client ID', html: `<p>Copy the <strong>Client ID</strong>. It ends in <code>.apps.googleusercontent.com</code>. You don't need the client secret.</p>`, field: true },
+      ],
+      dropbox: [
+        { title: 'Create a Dropbox app', html: `${extLink('https://www.dropbox.com/developers/apps/create', 'Create app')}<ol><li>Choose <strong>Scoped access</strong>.</li><li>Choose <strong>App folder</strong>, so it only reaches its own folder.</li><li>Give it a name nobody else has used (e.g. <em>LA Field Guides ${escapeHtml(Math.random().toString(36).slice(2, 6))}</em>) and click <strong>Create app</strong>.</li></ol>` },
+        { title: 'Allow file access', html: `<p>On the <strong>Permissions</strong> tab, tick these, then click <strong>Submit</strong>:</p>${copyField('files.metadata.read')}${copyField('files.content.read')}${copyField('files.content.write')}${copyField('account_info.read')}` },
+        { title: 'Add this site', html: `<p>On the <strong>Settings</strong> tab:</p><ol><li>Under <strong>OAuth 2 → Redirect URIs</strong>, add:</li></ol>${redirect}<ol start="2"><li>Set <strong>Allow public clients (Implicit Grant &amp; PKCE)</strong> to <strong>Allow</strong>.</li></ol>` },
+        { title: 'Copy the app key', html: `<p>On the same <strong>Settings</strong> tab, copy the <strong>App key</strong>. You don't need the app secret.</p>`, field: true },
+      ],
+    };
+    return steps[id];
+  }
+
+  const wizard = { id: null, step: 0 };
+  function openCloudWizard(id) {
+    wizard.id = id; wizard.step = 0;
+    const dlg = el('cloudWizard');
+    renderWizard();
+    if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  function closeCloudWizard() { const dlg = el('cloudWizard'); if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+  function renderWizard() {
+    const id = wizard.id, p = CLOUD_PROVIDERS[id], steps = wizardSteps(id), st = steps[wizard.step];
+    const last = wizard.step === steps.length - 1;
+    const own = userCloudConfig[id] || {};
+    const current = cloudCfg(id);
+    el('wizTitle').textContent = `Set up ${p.name}`;
+    el('wizDots').innerHTML = steps.map((_, i) => `<span class="${i <= wizard.step ? 'on' : ''}"></span>`).join('');
+    el('wizBody').innerHTML = `<div class="wiz-step-label">Step ${wizard.step + 1} of ${steps.length}</div><h3>${st.title}</h3>${st.html}` +
+      (wizard.step === 0 && current ? `<p class="muted-note">Already set up${own.clientId ? ' in this browser' : ' by this site'}. To use a different registration, continue to the last step and enter its ID.</p>` : '') +
+      (wizard.step === 0 ? `<p class="muted-note">Already registered on another device? Skip to the last step and paste the same ID, or import a backup file from that device; the setup travels with it.</p>` : '') +
+      (st.field ? `
+        <label class="wiz-field">${id === 'dropbox' ? 'App key' : 'Client ID'}
+          <input type="text" id="wizClientId" autocomplete="off" spellcheck="false" value="${escapeHtml(own.clientId || '')}" placeholder="${id === 'onedrive' ? '00000000-0000-0000-0000-000000000000' : id === 'gdrive' ? '123…apps.googleusercontent.com' : 'abc123xyz…'}">
+        </label>
+        ${id === 'onedrive' ? `<details class="wiz-adv"><summary>Advanced</summary><label class="wiz-field">Tenant (leave as “common” unless your organization says otherwise)<input type="text" id="wizTenant" value="${escapeHtml(own.tenant || 'common')}"></label></details>` : ''}
+        <div class="wiz-error" id="wizError" role="alert"></div>
+        <p class="muted-note">The ID is saved in this browser and included in your backup files. It isn't a password; sign-in still happens with your own ${p.name} account.</p>` : '');
+    el('wizBack').disabled = wizard.step === 0;
+    el('wizNext').textContent = last ? 'Save and connect' : 'Next';
+    el('wizSkip').style.display = last ? 'none' : '';
+    el('wizRemove').style.display = last && own.clientId ? '' : 'none';
+    el('wizBody').scrollTop = 0;
+  }
+  el('wizBack').addEventListener('click', () => { if (wizard.step > 0) { wizard.step--; renderWizard(); } });
+  el('wizSkip').addEventListener('click', () => { wizard.step = wizardSteps(wizard.id).length - 1; renderWizard(); });
+  el('wizClose').addEventListener('click', closeCloudWizard);
+  el('wizNext').addEventListener('click', () => {
+    const id = wizard.id, steps = wizardSteps(id);
+    if (wizard.step < steps.length - 1) { wizard.step++; renderWizard(); return; }
+    const clientId = el('wizClientId').value.trim();
+    const tenant = el('wizTenant') ? (el('wizTenant').value.trim() || 'common') : undefined;
+    if (!CLOUD_ID_PATTERNS[id].test(clientId)) {
+      el('wizError').textContent = id === 'onedrive' ? 'That doesn’t look like an Application (client) ID: it should be 36 characters like 1a2b3c4d-1234-5678-9abc-1234567890ab.'
+        : id === 'gdrive' ? 'That doesn’t look like a Google client ID: it should end in .apps.googleusercontent.com.'
+        : 'That doesn’t look like a Dropbox app key: it should be letters and numbers only.';
+      return;
+    }
+    const prev = userCloudConfig[id] || {};
+    userCloudConfig[id] = { clientId, ...(tenant ? { tenant } : {}), setupAt: new Date().toISOString() };
+    if (prev.clientId && prev.clientId !== clientId) cloudSet(id, null); // old sign-in belonged to the old registration
+    closeCloudWizard();
+    saveUserCloudConfig();
+    renderCloud();
+    // Still inside the click, so the sign-in pop-up isn't blocked.
+    cloudConnect(id).catch((err) => { setBackupStatus(`${CLOUD_PROVIDERS[id].name}: ${err.message.replace(/\.$/, '')}. If the sign-in page showed an error, reopen Setup and check each step.`); renderCloud(); });
+  });
+  el('wizRemove').addEventListener('click', () => {
+    const id = wizard.id;
+    delete userCloudConfig[id];
+    cloudSet(id, null);
+    saveUserCloudConfig();
+    closeCloudWizard();
+    renderCloud();
+    setBackupStatus(`Removed the ${CLOUD_PROVIDERS[id].name} setup from this browser.`);
+  });
+  el('cloudWizard').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-copy]');
+    if (b) {
+      try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; }
+      catch { const r = document.createRange(); r.selectNodeContents(b.previousElementSibling); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); b.textContent = 'Selected'; }
+      setTimeout(() => { b.textContent = 'Copy'; }, 1500);
+      return;
+    }
+    if (e.target === el('cloudWizard')) closeCloudWizard(); // click on the backdrop
+  });
+  el('cloudWizard').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'wizClientId') { e.preventDefault(); el('wizNext').click(); } });
+
   el('cloudProviders').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-cloud-action]');
     if (!b) return;
     const id = b.dataset.cloudId, action = b.dataset.cloudAction, name = CLOUD_PROVIDERS[id].name;
     try {
-      if (action === 'connect') await cloudConnect(id);
+      if (action === 'setup') openCloudWizard(id);
+      else if (action === 'connect') await cloudConnect(id);
       else if (action === 'cancel') { if (cloudAuthCancel) cloudAuthCancel(); }
       else if (action === 'save') await cloudSave(id, false);
       else if (action === 'load') await cloudLoad(id);
@@ -5222,12 +5409,16 @@
   });
 
   (async () => {
-    if (!/^https?:$/.test(location.protocol) || !window.crypto || !crypto.subtle) return; // needs a web address (not a file opened from disk)
-    try {
-      const r = await fetch(new URL('shared/cloud.json', location.href), { cache: 'no-cache' });
-      if (r.ok) cloudConfig = await r.json();
-    } catch { /* no config: only the universal options show */ }
+    cloudAvailable = /^https?:$/.test(location.protocol) && !!(window.crypto && crypto.subtle); // needs a web address, not a file opened from disk
+    try { userCloudConfig = sanitizeCloudSetup(await settingsGet('cloudClients')); } catch {}
+    if (cloudAvailable) {
+      try {
+        const r = await fetch(new URL('shared/cloud.json', location.href), { cache: 'no-cache' });
+        if (r.ok) siteCloudConfig = sanitizeCloudSetup(await r.json());
+      } catch { /* no site defaults; each browser sets up its own */ }
+    }
     renderCloud();
+    if (!cloudAvailable) return;
     for (const id of cloudIds()) cloudCheckRemote(id);
   })();
   const cloudCheckedAt = {};
@@ -5267,6 +5458,12 @@
       ${preview.note ? `<div class="import-note">${escapeHtml(preview.note)}</div>` : ''}
       ${preview.users.length ? `<div class="export-group"><div class="export-group-title">Users</div>${preview.users.map((u) => row('data-import-user', u.username, `${u.username} (${n(u.observations)} observations, ${n(u.verifications)} first-record checks)`, importStateHtml(uMeta.get(u.username), u.meta, 'observations and checks'))).join('')}</div>` : ''}
       ${preview.places.length ? `<div class="export-group"><div class="export-group-title">Places</div>${preview.places.map((p) => row('data-import-place', p.placeId, `${(p.meta && p.meta.placeName) || `Place ${p.placeId}`} (${n(p.species)} species, ${n(p.records)} first-finder records)`, importStateHtml(pMeta.get(p.placeId), p.meta, 'species and records'))).join('')}</div>` : ''}
+      ${Object.keys(preview.cloudSetup).length ? `<div class="export-group"><div class="export-group-title">Cloud backup setup</div>${Object.entries(preview.cloudSetup).map(([id, c]) => {
+        const mine = userCloudConfig[id] && userCloudConfig[id].clientId;
+        const same = mine === c.clientId;
+        const stateHtml = !mine ? '<span class="import-choice-state newer">not set up here yet</span>' : same ? '<span class="import-choice-state">same as yours</span>' : '<span class="import-choice-state older">different from yours (replaces it if ticked)</span>';
+        return `<label class="export-choice"><input type="checkbox" data-import-cloud="${id}"${same || !mine ? ' checked' : ''}> ${CLOUD_PROVIDERS[id].name} ${stateHtml}</label>`;
+      }).join('')}</div>` : ''}
       ${!preview.users.length && !preview.places.length ? '<div class="status-line">This file only holds shared lookups (species facts); importing adds those.</div>' : ''}
       <div class="export-choice-actions">
         <button type="button" data-import-confirm>Import selected</button>
@@ -5282,8 +5479,19 @@
     if (e.target.closest('[data-import-cancel]')) { pendingImport = null; el('importPreview').style.display = 'none'; setBackupStatus('Import cancelled.'); return; }
     if (!e.target.closest('[data-import-confirm]') || !pendingImport) return;
     const preview = pendingImport;
-    const boxes = [...el('importPreview').querySelectorAll('input[type="checkbox"]')];
+    const cloudBoxes = [...el('importPreview').querySelectorAll('input[data-import-cloud]')];
+    const cloudPicked = cloudBoxes.filter((cb) => cb.checked).map((cb) => cb.dataset.importCloud);
+    const boxes = [...el('importPreview').querySelectorAll('input[type="checkbox"]:not([data-import-cloud])')];
     const all = boxes.every((cb) => cb.checked);
+    if (cloudPicked.length) {
+      for (const id of cloudPicked) {
+        const prev = userCloudConfig[id];
+        if (prev && prev.clientId !== preview.cloudSetup[id].clientId) cloudSet(id, null);
+        userCloudConfig[id] = preview.cloudSetup[id];
+      }
+      saveUserCloudConfig();
+      renderCloud();
+    }
     const sel = all ? null : {
       users: new Set(boxes.filter((cb) => cb.checked && cb.dataset.importUser != null).map((cb) => cb.dataset.importUser)),
       places: new Set(boxes.filter((cb) => cb.checked && cb.dataset.importPlace != null).map((cb) => Number(cb.dataset.importPlace))),

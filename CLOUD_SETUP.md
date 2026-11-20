@@ -1,13 +1,21 @@
 # Cloud backup setup (iNaturalist Highlights)
 
 `iNaturalistHighlights.html` can save its backup file straight to **OneDrive**, **Google Drive** and
-**Dropbox**. Each service needs a free "app registration" that identifies this site. Once you paste
-its client ID into [`shared/cloud.json`](shared/cloud.json), that service shows up in the
-**Backup data file** panel with *Connect*, *Save now*, *Load backup* and *Auto-save*. A service with
-a blank client ID stays hidden.
+**Dropbox**. Each service needs a free one-time "app registration" that tells it this site may ask
+for access.
 
-No secrets are involved: these are public client IDs, safe to commit. Visitors sign in with their own
-accounts, and their tokens stay in their own browser.
+**Visitors set this up themselves, in the browser.** In the **Backup data file** panel, each service
+has a **Set up** button that opens a step-by-step guide. The guide links to the right console page,
+offers copy buttons for the exact redirect address and permissions, and checks the pasted ID before
+connecting. The ID is kept in that browser's own storage and included in every backup file, so
+importing a backup on another device (or sharing it with a friend) carries the setup along. Sign-in
+tokens never leave the browser.
+
+The sections below match the steps in the guide, for reference.
+
+**Optional site-wide default:** if you put client IDs in [`shared/cloud.json`](shared/cloud.json),
+every visitor can use them without running the guide. A visitor's own setup always takes priority.
+These are public client IDs, safe to commit.
 
 **iCloud and Box** have no sign-in a static website can use without a server. They work through
 their desktop sync folders (*Link auto-save file…* or *Export to file*) and, on phones, the
@@ -68,6 +76,7 @@ pauses until you click **Reconnect**.
 The file is saved in **Dropbox › Apps › (your app name)**. New Dropbox apps allow 500 users until you
 use **Apply for production** in the app console.
 
-## After editing `shared/cloud.json`
+## Site-wide defaults
 
-Commit and push. GitHub Pages picks up the change on its next rebuild, with no other code changes needed.
+To give every visitor a ready-made setup, paste the IDs into `shared/cloud.json`, then commit and push.
+GitHub Pages picks up the change on its next rebuild.

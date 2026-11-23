@@ -2648,7 +2648,8 @@
     if (info.iconic === 'Insecta' || info.iconic === 'Arachnida') links.push(['BugGuide', `https://bugguide.net/index.php?q=search&keys=${enc(name)}`]);
     links.push(['GBIF', info.gbifKey ? `https://www.gbif.org/species/${info.gbifKey}` : `https://www.gbif.org/species/search?q=${enc(name)}`]);
     links.push(['NatureServe', info.nsUrl ? `https://explorer.natureserve.org${info.nsUrl}` : `https://explorer.natureserve.org/Search#q=${enc(name)}`]);
-    links.push(['iDigBio', `https://portal.idigbio.org/portal/search?rq=${enc(JSON.stringify({ scientificname: name.toLowerCase() }))}`]);
+    // iDigBio's own portal closed in 2026 and redirects to its GBIF-hosted portal's home page.
+    links.push(['iDigBio', info.gbifKey ? `https://idigbio.gbif.us/occurrence/search?taxonKey=${info.gbifKey}` : `https://idigbio.gbif.us/occurrence/search?q=${enc(name)}`]);
     return `<div class="evidence"><span class="ev-label">Records:</span> ${escapeHtml(parts.join(' · '))}` +
       `<span class="ev-links">Check: ${links.map(([label, href]) => `<a class="ev-link" href="${escapeHtml(href)}" target="_blank" rel="noopener">${label} ↗</a>`).join(' ')}</span></div>`;
   }

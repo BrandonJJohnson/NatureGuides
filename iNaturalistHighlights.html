@@ -535,6 +535,14 @@
   .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   .card-actions button, .card-actions a.secondary { padding: 5px 10px; font-size: 0.8rem; min-height: 32px; }
   div.obs-card:hover { border-color: var(--border); }
+  /* Cards with "Check:" source links can't be one big <a> (links can't nest), so a cover link
+     fills the card and the source links sit above it. */
+  .obs-card.ev-card { position: relative; }
+  div.obs-card.ev-card:hover { border-color: var(--accent); }
+  .card-cover { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+  .card-cover:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ev-card .evidence { position: relative; z-index: 2; }
+  .ev-links a.ev-link { padding: 2px 0; }
   .obs-rank { font-weight: 700; color: var(--muted); min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
   .obs-thumb.round { border-radius: 50%; }
   .group-breakdown { margin-top: 12px; font-size: 0.88rem; }
@@ -2642,7 +2650,7 @@
     links.push(['NatureServe', info.nsUrl ? `https://explorer.natureserve.org${info.nsUrl}` : `https://explorer.natureserve.org/Search#q=${enc(name)}`]);
     links.push(['iDigBio', `https://portal.idigbio.org/portal/search?rq=${enc(JSON.stringify({ scientificname: name.toLowerCase() }))}`]);
     return `<div class="evidence"><span class="ev-label">Records:</span> ${escapeHtml(parts.join(' · '))}` +
-      `<span class="ev-links">Check: ${links.map(([label, href]) => `<span class="ev-link" role="link" tabindex="0" data-href="${escapeHtml(href)}">${label} ↗</span>`).join(' ')}</span></div>`;
+      `<span class="ev-links">Check: ${links.map(([label, href]) => `<a class="ev-link" href="${escapeHtml(href)}" target="_blank" rel="noopener">${label} ↗</a>`).join(' ')}</span></div>`;
   }
 
   // Older cached species records predate storing the scientific name; fill it in from the
@@ -2835,15 +2843,23 @@
       allBadges.push({ text: v.text, cls: v.cls, verify: true });
     }
     return `
-      <a class="obs-card" href="https://www.inaturalist.org/observations/${obs.id}" target="_blank" rel="noopener"${verifyKeyAttr ? ` data-verify-key="${verifyKeyAttr}"` : ''}>
+      ${cardOpen(`https://www.inaturalist.org/observations/${obs.id}`, verifyKeyAttr ? ` data-verify-key="${verifyKeyAttr}"` : '', extraHtml)}
         ${img ? `<img class="obs-thumb" src="${img}" alt="">` : `<div class="obs-thumb"></div>`}
         <div class="obs-info">
           <div class="obs-name">${escapeHtml(common)}${showSci ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
           <div class="obs-meta">${escapeHtml(date)} &middot; ${escapeHtml(place)}</div>
           ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-verify-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}${extraHtml || ''}
         </div>
-      </a>`;
+      ${cardClose(extraHtml)}`;
   }
+
+  // A card is normally one link to iNaturalist. When it carries its own links (the Notable
+  // "Check:" sources) it becomes a div with a full-size cover link, since links can't nest.
+  function cardOpen(href, attrs, extraHtml) {
+    if (!extraHtml) return `<a class="obs-card" href="${href}" target="_blank" rel="noopener"${attrs}>`;
+    return `<div class="obs-card ev-card"${attrs}><a class="card-cover" href="${href}" target="_blank" rel="noopener" aria-label="Open on iNaturalist"></a>`;
+  }
+  function cardClose(extraHtml) { return extraHtml ? '</div>' : '</a>'; }
 
   function matchesFilter(taxon, filterText) {
     if (!filterText) return true;
@@ -3342,14 +3358,14 @@
     }
     const href = `https://www.inaturalist.org/observations?place_id=${place ? place.id : ''}&taxon_id=${t.id}&verifiable=any`;
     return `
-      <a class="obs-card" href="${href}" target="_blank" rel="noopener"${recordKeyAttr ? ` data-record-key="${recordKeyAttr}"` : ''}>
+      ${cardOpen(href, recordKeyAttr ? ` data-record-key="${recordKeyAttr}"` : '', extraHtml)}
         ${img ? `<img class="obs-thumb" src="${img}" alt="">` : `<div class="obs-thumb"></div>`}
         <div class="obs-info">
           <div class="obs-name">${escapeHtml(common)}${showSci ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
           <div class="obs-meta">${entry.count} observation${entry.count === 1 ? '' : 's'} in ${escapeHtml(place ? place.name : '')}</div>
           ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-record-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}${extraHtml || ''}
         </div>
-      </a>`;
+      ${cardClose(extraHtml)}`;
   }
 
   function placeStatsList() {
@@ -4143,16 +4159,6 @@
     rerenderTab(tab);
   });
 
-  function openEvidenceLink(e) {
-    const link = e.target.closest && e.target.closest('.ev-link[data-href]');
-    if (!link) return false;
-    e.preventDefault();
-    e.stopPropagation();
-    window.open(link.dataset.href, '_blank', 'noopener');
-    return true;
-  }
-  document.addEventListener('click', openEvidenceLink, true);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Enter') openEvidenceLink(e); }, true);
 
   // Notable view settings are shared by both modes' Notable tabs.
   document.addEventListener('change', (e) => {

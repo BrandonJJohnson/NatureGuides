@@ -2503,6 +2503,56 @@
     onUpdate();
   }
 
+  // BugGuide species pages. BugGuide can't be queried from a web page, but Wikidata records each
+  // taxon's BugGuide node (P2464) against its iNaturalist ID (P3151), so look it up there in
+  // batches as insect cards render. Results (including "not on BugGuide") are kept in this browser.
+  const BUGGUIDE_KEY = 'inat_bugguide_nodes';
+  const bugguideNodes = (() => {
+    try { return new Map(Object.entries(JSON.parse(localStorage.getItem(BUGGUIDE_KEY) || '{}'))); } catch (e) { return new Map(); }
+  })();
+  const bugguidePending = new Set();
+  const bugguideFailed = new Set(); // lookups that errored this session; not retried until reload
+  let bugguideTimer = null, bugguideRunning = false;
+  function bugguideNode(taxonId) {
+    const id = String(taxonId);
+    if (bugguideNodes.has(id)) return bugguideNodes.get(id);
+    if (!bugguideFailed.has(id)) {
+      bugguidePending.add(id);
+      if (!bugguideTimer && !bugguideRunning) bugguideTimer = setTimeout(lookupBugguideNodes, 300);
+    }
+    return undefined;
+  }
+  async function lookupBugguideNodes() {
+    bugguideTimer = null;
+    if (bugguideRunning || !bugguidePending.size) return;
+    bugguideRunning = true;
+    let found = false;
+    while (bugguidePending.size) {
+      const batch = [...bugguidePending].slice(0, 150);
+      batch.forEach((id) => bugguidePending.delete(id));
+      const query = `SELECT ?inat ?bg WHERE { VALUES ?inat { ${batch.map((id) => `"${id}"`).join(' ')} } ?item wdt:P3151 ?inat; wdt:P2464 ?bg }`;
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 20000);
+        const r = await fetch(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`, { signal: ctrl.signal, headers: { Accept: 'application/sparql-results+json' } });
+        clearTimeout(timer);
+        if (!r.ok) throw new Error(`Wikidata error ${r.status}`);
+        const data = await r.json();
+        batch.forEach((id) => bugguideNodes.set(id, null));
+        for (const b of data.results.bindings) {
+          const node = b.bg && /^\d+$/.test(b.bg.value) ? b.bg.value : null;
+          if (node && !bugguideNodes.get(b.inat.value)) { bugguideNodes.set(b.inat.value, node); found = true; }
+        }
+      } catch (e) {
+        batch.forEach((id) => bugguideFailed.add(id));
+      }
+    }
+    try { localStorage.setItem(BUGGUIDE_KEY, JSON.stringify(Object.fromEntries(bugguideNodes))); } catch (e) { /* storage full or blocked: lookups just repeat next visit */ }
+    bugguideRunning = false;
+    if (found) { scheduleNotableRerender('user'); if (placeState.currentPlace) scheduleNotableRerender('place'); }
+    if (bugguidePending.size) bugguideTimer = setTimeout(lookupBugguideNodes, 300);
+  }
+
   // Specimens and NatureServe ranks for the species worth checking: rare candidates and anything
   // with a conservation status. Three small lookups each, cached for 90 days.
   const SRC_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -2645,7 +2695,10 @@
       const code = ebirdCodeCache.get(taxon.id);
       links.push(['eBird', code ? `https://ebird.org/species/${code}${stateName && US_STATE_ABBR[stateName] ? `/US-${US_STATE_ABBR[stateName]}` : ''}` : `https://ebird.org/explore?q=${enc(name)}`]);
     }
-    if (info.iconic === 'Insecta' || info.iconic === 'Arachnida') links.push(['BugGuide', `https://bugguide.net/index.php?q=search&keys=${enc(name)}`]);
+    if (info.iconic === 'Insecta' || info.iconic === 'Arachnida') {
+      const node = bugguideNode(taxon.id);
+      links.push(['BugGuide', node ? `https://bugguide.net/node/view/${node}` : `https://bugguide.net/index.php?q=search&keys=${enc(name)}`]);
+    }
     links.push(['GBIF', info.gbifKey ? `https://www.gbif.org/species/${info.gbifKey}` : `https://www.gbif.org/species/search?q=${enc(name)}`]);
     links.push(['NatureServe', info.nsUrl ? `https://explorer.natureserve.org${info.nsUrl}` : `https://explorer.natureserve.org/Search#q=${enc(name)}`]);
     // iDigBio's own portal closed in 2026 and redirects to its GBIF-hosted portal's home page.

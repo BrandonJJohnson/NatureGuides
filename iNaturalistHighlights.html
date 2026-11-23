@@ -484,6 +484,15 @@
     white-space: nowrap;
   }
   .badge.warn { color: var(--warn); }
+  .evidence { font-size: 0.76rem; color: var(--muted); margin-top: 5px; line-height: 1.45; overflow-wrap: anywhere; }
+  .ev-label { font-weight: 600; }
+  .ev-links { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; margin-left: 8px; }
+  .ev-link { color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .ev-link:hover, .ev-link:focus-visible { color: var(--text); }
+  .ebird-key-box { margin: -4px 0 12px; font-size: 0.84rem; color: var(--muted); }
+  .ebird-key-box summary { cursor: pointer; }
+  .ebird-key-box p { margin: 6px 0; }
+  .ebird-key-box label { display: inline-flex; gap: 6px; align-items: center; }
   .badge.danger { color: var(--danger); }
   .badge.confirmed { color: var(--accent-2); background: rgba(46,139,87,0.18); }
   .badge.not-first { color: var(--muted); }
@@ -820,6 +829,10 @@
   "Full Resync" clears everything for that place.
   "Download report" saves what's loaded for a user or place as a standalone page you can share or print to PDF, and
   "Download spreadsheet" saves the same rows as a CSV.
+  Notable finds are cross-checked beyond iNaturalist: GBIF (which holds eBird's full dataset and museum collections),
+  iDigBio museum specimens and NatureServe conservation ranks; a species counts as rare only if every source has few
+  records of it, and each find lists what each source says with links to check eBird, BugGuide, GBIF, NatureServe
+  and iDigBio yourself. An optional eBird API key adds a check against eBird's state species lists.
   For a place, "Top Observers" ranks who has the most observations or species there, and "Compare Observers" sets two
   people's species lists for that place side by side (only one, both, or neither yet), with a CSV download.
   Because browser storage can be wiped, "Export to file" saves the cache as a compact .zip backup file (all of
@@ -2063,8 +2076,10 @@
 
   const NOTABLE_CATEGORIES = [
     { value: 'all', label: 'All notable' },
-    { value: 'rare', label: 'Rare (few observations worldwide)' },
+    { value: 'rare', label: 'Rare (few records worldwide in every source checked)' },
     { value: 'global', label: 'Endangered worldwide (IUCN Vulnerable or worse)' },
+    { value: 'imperiled', label: 'Imperiled worldwide (NatureServe G1–G3)' },
+    { value: 'regional', label: 'Rare in the state (NatureServe S1–S2, eBird state list)' },
     { value: 'local', label: 'Protected / threatened status' },
     { value: 'obscured', label: 'Obscured location (sensitive)', userOnly: true },
   ];
@@ -2079,26 +2094,31 @@
     try { localStorage.setItem('inat_notable_settings', JSON.stringify(notableSettings)); } catch {}
   }
 
-  function taxonNotableReasons(taxon, obscured) {
+  // stateName: the state/province the sighting is in (user mode) or the searched place's state
+  // (place mode), for NatureServe state ranks and eBird state lists. May be null.
+  function taxonNotableReasons(taxon, obscured, stateName) {
     const reasons = [];
     const info = taxonInfo.get(taxon.id);
     const globalName = info && info.iucn >= 30 ? IUCN_NAMES[info.iucn] : null;
     if (globalName) reasons.push({ cat: 'global', text: `${globalName} worldwide (IUCN)`, cls: 'danger' });
     const world = worldRecordCount(info);
     if (info && isSpeciesRank(taxon) && world != null && world < notableSettings.rareThreshold) {
-      const n = info.observations_count;
-      let text = `Rare: ${n.toLocaleString()} iNaturalist observation${n === 1 ? '' : 's'}`;
-      if (notableSettings.useGbif) {
-        if (info.gbifStatus === 'ok') text += ` · ${info.gbifCount.toLocaleString()} GBIF record${info.gbifCount === 1 ? '' : 's'}`;
-        else if (info.gbifStatus === 'nomatch') text += ' · not matched in GBIF';
-        else text += ' · GBIF not checked yet';
-      }
-      reasons.push({ cat: 'rare', text: `${text} worldwide`, cls: 'warn' });
+      const checked = sourcesChecked(info);
+      let text = `Rare: at most ${world.toLocaleString()} record${world === 1 ? '' : 's'} worldwide`;
+      if (notableSettings.useGbif) text += checked.pending ? ' (more sources still being checked)' : ` in ${checked.n} source${checked.n === 1 ? '' : 's'}`;
+      reasons.push({ cat: 'rare', text, cls: 'warn' });
     }
+    const g = gRankOf(info);
+    if (g && isImperiledRank(g)) reasons.push({ cat: 'imperiled', text: `NatureServe ${g}: ${rankWords(g)} worldwide`, cls: 'danger' });
+    const sr = sRankIn(info, stateName);
+    if (sr && isImperiledRank(sr)) reasons.push({ cat: 'regional', text: `NatureServe ${sr} in ${stateName}: ${rankWords(sr)}`, cls: 'warn' });
+    if (stateName && ebirdMissing.has(`${taxon.id}|${stateName}`)) reasons.push({ cat: 'regional', text: `Not on eBird’s ${stateName} list — possible state record`, cls: 'danger' });
     const cs = taxon.conservation_status;
-    if (taxon.threatened === true || (cs && cs.status_name && !/least concern/i.test(cs.status_name))) {
+    // "Least concern", "secure" and "apparently secure" (NatureServe 4–5) mean not at risk.
+    if (taxon.threatened === true || (cs && cs.status_name && !/least concern|secure|not applicable|unrank|no status|data deficient/i.test(cs.status_name))) {
       const sameAsGlobal = globalName && cs && cs.status_name && cs.status_name.toLowerCase() === globalName.toLowerCase();
-      if (!sameAsGlobal) reasons.push({ cat: 'local', text: cs && cs.status_name ? `Conservation status: ${cs.status_name}` : 'Threatened', cls: 'warn' });
+      const sameAsNatureServe = cs && cs.status_name && /imperiled|vulnerable|extirpated|historical/i.test(cs.status_name) && reasons.some((r) => r.cat === 'regional' || r.cat === 'imperiled');
+      if (!sameAsGlobal && !sameAsNatureServe) reasons.push({ cat: 'local', text: cs && cs.status_name ? `Conservation status: ${cs.status_name}` : 'Threatened', cls: 'warn' });
     }
     if (obscured) reasons.push({ cat: 'obscured', text: 'Location obscured (sensitive species)', cls: 'warn' });
     return reasons;
@@ -2133,20 +2153,26 @@
     return Array.from(best.values());
   }
 
+  function obsStateName(obs) {
+    const p = getObsPlaceOfLevel(obs, state.placeCache, 'state');
+    return p ? p.name : null;
+  }
   function userNotableList() {
     const out = [];
     for (const c of state.notable) {
-      const reasons = taxonNotableReasons(c.obs.taxon, c.obscured);
-      if (reasonsMatchCategory(reasons, 'user')) out.push({ obs: c.obs, reasons });
+      const stateName = obsStateName(c.obs);
+      const reasons = taxonNotableReasons(c.obs.taxon, c.obscured, stateName);
+      if (reasonsMatchCategory(reasons, 'user')) out.push({ obs: c.obs, reasons, stateName });
     }
     return out;
   }
 
   function placeNotableList() {
     const out = [];
+    const stateName = placeStateName(placeState.currentPlace);
     for (const entry of placeState.speciesList) {
-      const reasons = taxonNotableReasons(entry.taxon, false);
-      if (reasonsMatchCategory(reasons, 'place')) out.push({ ...entry, reasons });
+      const reasons = taxonNotableReasons(entry.taxon, false, stateName);
+      if (reasonsMatchCategory(reasons, 'place')) out.push({ ...entry, reasons, stateName });
     }
     return out;
   }
@@ -2180,12 +2206,23 @@
       name: t.name || null,
       iconic: t.iconic_taxon_name || null,
       rankLevel: typeof t.rank_level === 'number' ? t.rank_level : null,
+      ns: natureServeFromInat(t),
       fetchedAt: Date.now(),
     };
   }
+  // NatureServe ranks iNaturalist already carries: { 'Louisiana': 'S1', 'United States': 'N3', '': 'G3' }.
+  function natureServeFromInat(t) {
+    const out = {};
+    for (const st of t.conservation_statuses || []) {
+      if (!/natureserve/i.test(st.authority || '') || !st.status) continue;
+      out[st.place ? st.place.name : ''] = String(st.status).toUpperCase();
+    }
+    return Object.keys(out).length ? out : null;
+  }
 
   // A refreshed iNaturalist lookup must not wipe the GBIF fields cached on the same record.
-  const GBIF_FIELDS = ['gbifKey', 'gbifName', 'gbifCount', 'gbifStatus', 'gbifFetchedAt'];
+  const GBIF_FIELDS = ['gbifKey', 'gbifName', 'gbifCount', 'gbifStatus', 'gbifFetchedAt',
+    'gbifEbird', 'gbifSpecimens', 'idigbioCount', 'nsGRank', 'nsSRanks', 'nsUrl', 'srcStatus', 'srcFetchedAt'];
   function keepGbifFields(rec) {
     const prev = taxonInfo.get(rec.id);
     if (prev) for (const f of GBIF_FIELDS) if (prev[f] !== undefined && rec[f] === undefined) rec[f] = prev[f];
@@ -2341,11 +2378,271 @@
     }
   }
 
-  // Worldwide record count used for "rare": the larger of iNaturalist and GBIF (GBIF includes iNat).
+  // Worldwide record count used for "rare": the largest count in any source. The sources overlap
+  // (GBIF holds iNaturalist's research-grade records, eBird's whole dataset and most museum
+  // specimens; iDigBio holds museum specimens), so they're never added — a species counts as rare
+  // only if every source checked has few records of it.
   function worldRecordCount(info) {
     if (!info || info.observations_count == null) return null;
-    if (notableSettings.useGbif && info.gbifStatus === 'ok' && typeof info.gbifCount === 'number') return Math.max(info.observations_count, info.gbifCount);
-    return info.observations_count;
+    let n = info.observations_count;
+    if (notableSettings.useGbif) {
+      if (info.gbifStatus === 'ok' && typeof info.gbifCount === 'number') n = Math.max(n, info.gbifCount);
+      if (typeof info.idigbioCount === 'number') n = Math.max(n, info.idigbioCount);
+    }
+    return n;
+  }
+  function sourcesChecked(info) {
+    let n = 1;
+    if (info.gbifStatus === 'ok') n++;
+    if (typeof info.idigbioCount === 'number') n++;
+    const pending = (gbifEnrich.running && !info.gbifStatus) || (srcEnrich.running && srcQueued.has(info.id));
+    return { n, pending };
+  }
+
+  // ---------- NatureServe ranks, states, eBird and the per-find evidence line ----------
+  const US_STATES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
+  const US_STATE_ABBR = Object.fromEntries(Object.entries(US_STATES).map(([a, n]) => [n, a]));
+  // The state a searched place lies in: the place itself, or the "LA" in "Bluebonnet Swamp, LA, US".
+  function placeStateName(place) {
+    if (!place) return null;
+    if (classifyPlace(place) === 'state') return place.name;
+    const parts = String(place.display_name || '').split(',').map((x) => x.trim());
+    for (let i = parts.length - 1; i >= 1; i--) {
+      if (US_STATES[parts[i]]) return US_STATES[parts[i]];
+      if (US_STATE_ABBR[parts[i]]) return parts[i];
+    }
+    return null;
+  }
+  function gRankOf(info) { return (info && (info.nsGRank || (info.ns && info.ns['']))) || null; }
+  function sRankIn(info, stateName) {
+    if (!info || !stateName) return null;
+    const ab = US_STATE_ABBR[stateName];
+    return (ab && info.nsSRanks && info.nsSRanks[ab]) || (info.ns && info.ns[stateName]) || null;
+  }
+  // G1/S1 critically imperiled, 2 imperiled, 3 vulnerable (G only), H possibly extinct/extirpated,
+  // X presumed extinct/extirpated. "S1S2"-style ranges count by their first number.
+  // Migratory species carry one rank per population ("S2N,S5B": imperiled in winter, secure as a
+  // breeder); the species counts only if its most secure population is still imperiled.
+  function isImperiledRank(r) {
+    const parts = String(r).toUpperCase().split(/[,;]\s*/);
+    return parts.length > 0 && parts.every((part) => {
+      const m = /^([GSTN])(\d|H|X)/.exec(part.trim());
+      if (!m) return false;
+      if (m[2] === 'H' || m[2] === 'X') return true;
+      return m[1] === 'S' || m[1] === 'N' ? +m[2] <= 2 : +m[2] <= 3;
+    });
+  }
+  function rankWords(r) {
+    const m = /^[GSTN](\d|H|X)/.exec(String(r).toUpperCase());
+    const local = /^[SN]/.test(String(r).toUpperCase());
+    return !m ? '' : { 1: 'critically imperiled', 2: 'imperiled', 3: 'vulnerable', 4: 'apparently secure', 5: 'secure', H: local ? 'possibly extirpated' : 'possibly extinct', X: local ? 'presumed extirpated' : 'presumed extinct' }[m[1]] || '';
+  }
+
+  // eBird: eBird's whole dataset is in GBIF, so its record counts come from there with no key.
+  // An optional personal eBird API key adds a check against each state's eBird species list.
+  let ebirdKey = '';
+  let ebirdBoxOpen = false;
+  document.addEventListener('toggle', (e) => { if (e.target.classList && e.target.classList.contains('ebird-key-box')) ebirdBoxOpen = e.target.open; }, true);
+  try { ebirdKey = localStorage.getItem('inat_ebird_key') || ''; } catch {}
+  const ebirdMissing = new Set(); // `${taxonId}|${stateName}` for birds not on that state's eBird list
+  const ebirdState = { running: false, error: '', checked: 0 };
+  let ebirdCodes = null; // Promise<Map(sciName lowercase -> speciesCode)>
+  const ebirdLists = new Map(); // region -> Promise<Set(speciesCode)>
+  function loadEbirdCodes() {
+    if (!ebirdCodes) {
+      ebirdCodes = fetch('https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=json&cat=species,issf')
+        .then((r) => { if (!r.ok) throw new Error(`eBird error ${r.status}`); return r.json(); })
+        .then((list) => new Map(list.map((x) => [String(x.sciName).toLowerCase(), x.speciesCode])))
+        .catch((e) => { ebirdCodes = null; throw e; });
+    }
+    return ebirdCodes;
+  }
+  function ebirdCodeFor(sciName) {
+    return loadEbirdCodes().then((m) => m.get(String(sciName || '').toLowerCase()) || null, () => null);
+  }
+  const ebirdCodeCache = new Map();
+  function ebirdStateList(region) {
+    if (!ebirdLists.has(region)) {
+      ebirdLists.set(region, fetch(`https://api.ebird.org/v2/product/spplist/${region}`, { headers: { 'X-eBirdApiToken': ebirdKey } })
+        .then((r) => { if (r.status === 401 || r.status === 403) throw new Error('eBird rejected the API key'); if (!r.ok) throw new Error(`eBird error ${r.status}`); return r.json(); })
+        .then((codes) => new Set(codes))
+        .catch((e) => { ebirdLists.delete(region); throw e; }));
+    }
+    return ebirdLists.get(region);
+  }
+  // Birds seen in a US state that eBird has never recorded there.
+  async function enrichEbird(pairs, onUpdate) {
+    if (!ebirdKey || ebirdState.running) return;
+    const todo = pairs.filter((p) => p.iconic === 'Aves' && US_STATE_ABBR[p.stateName]);
+    if (!todo.length) return;
+    Object.assign(ebirdState, { running: true, error: '', checked: 0 });
+    onUpdate();
+    try {
+      const codes = await loadEbirdCodes();
+      for (const p of todo) {
+        const code = codes.get(String(p.name).toLowerCase());
+        if (!code) continue; // name differs from eBird's taxonomy: no verdict rather than a false alarm
+        ebirdCodeCache.set(p.taxonId, code);
+        const list = await ebirdStateList(`US-${US_STATE_ABBR[p.stateName]}`);
+        const key = `${p.taxonId}|${p.stateName}`;
+        if (list.has(code)) ebirdMissing.delete(key); else ebirdMissing.add(key);
+        ebirdState.checked++;
+      }
+    } catch (e) {
+      ebirdState.error = e.message;
+    }
+    ebirdState.running = false;
+    onUpdate();
+  }
+
+  // Specimens and NatureServe ranks for the species worth checking: rare candidates and anything
+  // with a conservation status. Three small lookups each, cached for 90 days.
+  const SRC_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  const EBIRD_GBIF_DATASET = '4fa7b334-ce0d-4e88-aaae-2e0c138d049e'; // eBird Observation Dataset
+  const srcEnrich = { done: 0, total: 0, failed: 0, running: false };
+  const srcQueued = new Set(); // species waiting for (or in) the current cross-check
+  // Outside services get a 10-second limit per request, and a service that fails three times in
+  // a row is skipped for the rest of the run, so one slow site can't stall the whole check.
+  const srcHealth = { idigbio: { fails: 0, off: false }, natureserve: { fails: 0, off: false } };
+  async function extFetch(url, opts, isCancelled, source) {
+    const h = srcHealth[source];
+    if (h && h.off) throw new Error('skipped');
+    for (let attempt = 0; ; attempt++) {
+      if (isCancelled()) throw new Error('Cancelled');
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      let res = null;
+      try { res = await fetch(url, { ...(opts || {}), signal: ctrl.signal }); } catch { res = null; }
+      clearTimeout(timer);
+      if (res && res.ok) { if (h) h.fails = 0; return res.json(); }
+      if (res && res.status < 500 && res.status !== 429) throw new Error(`HTTP ${res.status}`);
+      if (attempt >= 1) {
+        if (h && ++h.fails >= 3) h.off = true;
+        throw new Error('unreachable');
+      }
+      await sleep(1500);
+    }
+  }
+  async function natureServeLookup(name, isCancelled) {
+    const d = await extFetch('https://explorer.natureserve.org/api/data/speciesSearch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ criteriaType: 'species', textCriteria: [{ paramType: 'quickSearch', searchToken: name }], pagingOptions: { page: 0, recordsPerPage: 5 } }),
+    }, isCancelled, 'natureserve');
+    const lower = name.toLowerCase();
+    const hit = (d.results || []).find((r) => String(r.scientificName || '').toLowerCase() === lower);
+    if (!hit) return null;
+    const sRanks = {};
+    for (const nation of hit.nations || []) for (const sub of nation.subnations || []) if (sub.subnationCode && sub.roundedSRank) sRanks[sub.subnationCode] = sub.roundedSRank;
+    return { g: hit.roundedGRank || hit.gRank || null, s: sRanks, url: hit.nsxUrl || null };
+  }
+  function needsSources(info, taxon) {
+    if (!info || !notableSettings.useGbif || !info.name || !isSpeciesRank(taxon)) return false;
+    if (info.srcFetchedAt && Date.now() - info.srcFetchedAt < SRC_MAX_AGE_MS) return false;
+    const world = worldRecordCount(info);
+    const rareNow = world != null && world < notableSettings.rareThreshold;
+    const hasStatus = (info.iucn != null && info.iucn >= 30) || taxon.threatened === true ||
+      !!(info.ns && Object.values(info.ns).some(isImperiledRank));
+    return rareNow || hasStatus;
+  }
+  let srcRunId = 0;
+  async function enrichSources(taxa, onUpdate) {
+    const myRun = ++srcRunId;
+    const isCancelled = () => myRun !== srcRunId;
+    const seen = new Set();
+    const todo = [];
+    for (const t of taxa) {
+      if (!t || seen.has(t.id)) continue;
+      seen.add(t.id);
+      const info = taxonInfo.get(t.id);
+      if (needsSources(info, t)) todo.push({ ...info });
+    }
+    Object.assign(srcEnrich, { done: 0, total: todo.length, failed: 0, running: todo.length > 0 });
+    srcQueued.clear();
+    for (const t of todo) srcQueued.add(t.id);
+    onUpdate();
+    if (!todo.length) return;
+    const db = await dbPromise;
+    let next = 0;
+    async function worker() {
+      while (next < todo.length) {
+        if (isCancelled()) return;
+        const info = todo[next++];
+        const rec = { ...(taxonInfo.get(info.id) || info) };
+        let ok = 0, tried = 0;
+        const tasks = [];
+        if (rec.gbifKey) {
+          tried++;
+          tasks.push(gbifFetch(`/occurrence/search?limit=0&taxonKey=${rec.gbifKey}&facet=basisOfRecord&facet=datasetKey&datasetKey.facetLimit=1000`, isCancelled).then((d) => {
+            const facet = (name) => ((d.facets || []).find((f) => f.field === name) || { counts: [] }).counts;
+            rec.gbifCount = d.count || 0;
+            rec.gbifStatus = 'ok';
+            rec.gbifEbird = (facet('DATASET_KEY').find((c) => c.name === EBIRD_GBIF_DATASET) || { count: 0 }).count;
+            rec.gbifSpecimens = facet('BASIS_OF_RECORD').filter((c) => /SPECIMEN|MATERIAL_SAMPLE/.test(c.name)).reduce((a, c) => a + c.count, 0);
+            ok++;
+          }, () => {}));
+        }
+        if (!srcHealth.idigbio.off) {
+          tried++;
+          tasks.push(extFetch(`https://search.idigbio.org/v2/summary/count/records/?rq=${encodeURIComponent(JSON.stringify({ scientificname: rec.name.toLowerCase() }))}`, undefined, isCancelled, 'idigbio')
+            .then((d) => { rec.idigbioCount = typeof d.itemCount === 'number' ? d.itemCount : null; ok++; }, () => {}));
+        }
+        if (!srcHealth.natureserve.off) {
+          tried++;
+          tasks.push(natureServeLookup(rec.name, isCancelled).then((ns) => {
+            rec.nsGRank = ns ? ns.g : null; rec.nsSRanks = ns ? ns.s : null; rec.nsUrl = ns ? ns.url : null; ok++;
+          }, () => {}));
+        }
+        await Promise.all(tasks);
+        if (isCancelled()) return;
+        // A skipped source makes the result partial; partial results are re-checked next time.
+        const skipped = srcHealth.idigbio.off || srcHealth.natureserve.off;
+        rec.srcStatus = ok === tried && !skipped ? 'ok' : ok ? 'partial' : 'failed';
+        if (rec.srcStatus === 'ok') rec.srcFetchedAt = Date.now();
+        else if (!ok) srcEnrich.failed++;
+        taxonInfo.set(rec.id, rec);
+        srcQueued.delete(rec.id);
+        await idbPutMany(db, 'taxa', [rec]);
+        srcEnrich.done++;
+        onUpdate();
+      }
+    }
+    try { await Promise.all([worker(), worker(), worker()]); }
+    finally { if (!isCancelled()) { srcEnrich.running = false; onUpdate(); } }
+  }
+
+  // One line per find: what each source says, plus links to check sources that can't be queried
+  // from a web page (BugGuide) or that deserve a human look (eBird, NatureServe, GBIF, iDigBio).
+  function evidenceHtml(taxon, stateName) {
+    const info = taxonInfo.get(taxon.id);
+    if (!info) return '';
+    const f = (n) => Number(n || 0).toLocaleString();
+    const name = info.name || taxon.name;
+    const parts = [];
+    if (info.observations_count != null) parts.push(`iNaturalist ${f(info.observations_count)}`);
+    if (notableSettings.useGbif) {
+      if (info.gbifStatus === 'ok') {
+        const sub = [];
+        if (typeof info.gbifEbird === 'number' && (info.gbifEbird || info.iconic === 'Aves')) sub.push(`eBird ${f(info.gbifEbird)}`);
+        if (typeof info.gbifSpecimens === 'number') sub.push(`specimens ${f(info.gbifSpecimens)}`);
+        parts.push(`GBIF ${f(info.gbifCount)}${sub.length ? ` (${sub.join(', ')})` : ''}`);
+      } else if (info.gbifStatus === 'nomatch') parts.push('GBIF: name not matched');
+      if (typeof info.idigbioCount === 'number') parts.push(`iDigBio specimens ${f(info.idigbioCount)}`);
+      const g = gRankOf(info), sr = sRankIn(info, stateName);
+      if (g || sr) parts.push(`NatureServe ${[g, sr ? `${US_STATE_ABBR[stateName] || stateName} ${sr}` : null].filter(Boolean).join(' · ')}`);
+      if (srcQueued.has(taxon.id) && srcEnrich.running) parts.push('checking more sources…');
+    }
+    const enc = encodeURIComponent;
+    const links = [];
+    if (info.iconic === 'Aves') {
+      const code = ebirdCodeCache.get(taxon.id);
+      links.push(['eBird', code ? `https://ebird.org/species/${code}${stateName && US_STATE_ABBR[stateName] ? `/US-${US_STATE_ABBR[stateName]}` : ''}` : `https://ebird.org/explore?q=${enc(name)}`]);
+    }
+    if (info.iconic === 'Insecta' || info.iconic === 'Arachnida') links.push(['BugGuide', `https://bugguide.net/index.php?q=search&keys=${enc(name)}`]);
+    links.push(['GBIF', info.gbifKey ? `https://www.gbif.org/species/${info.gbifKey}` : `https://www.gbif.org/species/search?q=${enc(name)}`]);
+    links.push(['NatureServe', info.nsUrl ? `https://explorer.natureserve.org${info.nsUrl}` : `https://explorer.natureserve.org/Search#q=${enc(name)}`]);
+    links.push(['iDigBio', `https://portal.idigbio.org/portal/search?rq=${enc(JSON.stringify({ scientificname: name.toLowerCase() }))}`]);
+    return `<div class="evidence"><span class="ev-label">Records:</span> ${escapeHtml(parts.join(' · '))}` +
+      `<span class="ev-links">Check: ${links.map(([label, href]) => `<span class="ev-link" role="link" tabindex="0" data-href="${escapeHtml(href)}">${label} ↗</span>`).join(' ')}</span></div>`;
   }
 
   // Older cached species records predate storing the scientific name; fill it in from the
@@ -2369,7 +2666,23 @@
     if (state.notable) for (const c of state.notable) if (isSpeciesRank(c.obs.taxon)) taxa.push(c.obs.taxon);
     if (placeState.speciesList) for (const e of placeState.speciesList) if (isSpeciesRank(e.taxon)) taxa.push({ ...e.taxon, id: e.taxonId });
     backfillTaxonNames(taxa);
-    enrichGbif(taxa, () => { scheduleNotableRerender('user'); if (placeState.currentPlace) scheduleNotableRerender('place'); });
+    const rerenderBoth = () => { scheduleNotableRerender('user'); if (placeState.currentPlace) scheduleNotableRerender('place'); };
+    enrichGbif(taxa, rerenderBoth).then(() => enrichSources(taxa, rerenderBoth)).catch(() => {});
+    refreshEbirdForLoaded();
+  }
+  function refreshEbirdForLoaded() {
+    if (!ebirdKey) return;
+    const pairs = [];
+    const info = (id) => taxonInfo.get(id) || {};
+    if (state.notable) for (const c of state.notable) {
+      const st = obsStateName(c.obs);
+      if (st && isSpeciesRank(c.obs.taxon)) pairs.push({ taxonId: c.obs.taxon.id, name: c.obs.taxon.name, iconic: c.obs.taxon.iconic_taxon_name || info(c.obs.taxon.id).iconic, stateName: st });
+    }
+    const pst = placeStateName(placeState.currentPlace);
+    if (pst && placeState.speciesList) for (const e of placeState.speciesList) {
+      if (isSpeciesRank(e.taxon)) pairs.push({ taxonId: e.taxonId, name: e.taxon.name, iconic: e.taxon.iconic_taxon_name || info(e.taxonId).iconic, stateName: pst });
+    }
+    enrichEbird(pairs, () => { scheduleNotableRerender('user'); if (placeState.currentPlace) scheduleNotableRerender('place'); });
   }
 
   async function enrichTaxa(mode, taxonIds, isCancelled, onUpdate) {
@@ -2377,7 +2690,7 @@
     const now = Date.now();
     const missing = [...new Set(taxonIds)].filter((id) => {
       const info = taxonInfo.get(id);
-      return !info || now - info.fetchedAt > TAXON_INFO_MAX_AGE_MS;
+      return !info || now - info.fetchedAt > TAXON_INFO_MAX_AGE_MS || info.ns === undefined;
     });
     const prog = taxonEnrich[mode];
     Object.assign(prog, { done: 0, total: missing.length, failed: 0, running: missing.length > 0 });
@@ -2410,6 +2723,13 @@
     const g = gbifEnrich;
     if (notableSettings.useGbif && g.running) parts.push(`Checking GBIF for records outside iNaturalist: ${g.done.toLocaleString()} / ${g.total.toLocaleString()} rare candidates — species with many GBIF records drop off the rare list.`);
     if (notableSettings.useGbif && !g.running && g.failed) parts.push(`${g.failed.toLocaleString()} species couldn't be checked in GBIF; reload later to retry.`);
+    const sx = srcEnrich;
+    if (notableSettings.useGbif && sx.running) parts.push(`Cross-checking candidates in GBIF (eBird, specimens), iDigBio and NatureServe: ${sx.done.toLocaleString()} / ${sx.total.toLocaleString()} — finds common in any source drop off.`);
+    if (notableSettings.useGbif && !sx.running && sx.failed) parts.push(`${sx.failed.toLocaleString()} species couldn't be cross-checked; reload later to retry.`);
+    const down = [srcHealth.idigbio.off && 'iDigBio', srcHealth.natureserve.off && 'NatureServe'].filter(Boolean);
+    if (notableSettings.useGbif && down.length) parts.push(`${down.join(' and ')} ${down.length > 1 ? 'aren’t' : 'isn’t'} responding right now, so ${down.length > 1 ? 'they were' : 'it was'} skipped; reload later to include ${down.length > 1 ? 'them' : 'it'}.`);
+    if (ebirdState.running) parts.push('Checking birds against eBird state lists…');
+    if (ebirdState.error) parts.push(`eBird: ${ebirdState.error}.`);
     return parts.length ? `<div class="status-line">${escapeHtml(parts.join(' '))}</div>` : '';
   }
 
@@ -2427,10 +2747,15 @@
           <input type="number" min="1" step="1" data-notable-threshold value="${notableSettings.rareThreshold}" style="width:100px;">
           records worldwide
         </label>
-        <label title="GBIF combines museum, survey, eBird and other platforms' records with iNaturalist's. A species counts as rare only if it is rare there too.">
-          <input type="checkbox" data-notable-gbif${notableSettings.useGbif ? ' checked' : ''}> Also count GBIF records
+        <label title="Cross-check rare candidates in GBIF (which includes eBird's full dataset and museum collections), iDigBio museum specimens and NatureServe conservation ranks. A species counts as rare only if it is rare in every source.">
+          <input type="checkbox" data-notable-gbif${notableSettings.useGbif ? ' checked' : ''}> Cross-check other sources (GBIF/eBird, iDigBio, NatureServe)
         </label>
-      </div>`;
+      </div>
+      <details class="ebird-key-box"${ebirdBoxOpen ? ' open' : ''}>
+        <summary>${ebirdKey ? 'eBird state lists: on' : 'Optional: check birds against eBird state lists'}</summary>
+        <p>With a free personal eBird API key, birds are also checked against eBird's list for the state they were seen in; a bird eBird has never recorded there is flagged as a possible state record. Get a key at <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener">ebird.org/api/keygen</a> (needs an eBird login). It's kept only in this browser.</p>
+        <label>eBird API key <input type="text" data-ebird-key value="${escapeHtml(ebirdKey)}" placeholder="e.g. a1b2c3d4e5f6" autocomplete="off" spellcheck="false" style="width:14em;"></label>
+      </details>`;
   }
 
   function distinctPlacesVisited(observations, placeCache, level) {
@@ -2496,7 +2821,7 @@
     return { text: 'Verification failed', cls: 'error' };
   }
 
-  function obsCardHtml(obs, badges, verifyKeyAttr) {
+  function obsCardHtml(obs, badges, verifyKeyAttr, extraHtml) {
     const t = obs.taxon;
     if (!t) return '';
     const img = photoUrl(t);
@@ -2515,7 +2840,7 @@
         <div class="obs-info">
           <div class="obs-name">${escapeHtml(common)}${showSci ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
           <div class="obs-meta">${escapeHtml(date)} &middot; ${escapeHtml(place)}</div>
-          ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-verify-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}
+          ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-verify-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}${extraHtml || ''}
         </div>
       </a>`;
   }
@@ -2757,7 +3082,7 @@
       ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(notableSearchUrl(filtered, state.currentUsername))}" target="_blank" rel="noopener">${linkLabel} ↗</a></div>`
       : '';
     container.innerHTML = controlsHtml + linkHtml +
-      `<div class="card-list">${pageItems.map((n) => obsCardHtml(n.obs, n.reasons)).join('')}</div>` +
+      `<div class="card-list">${pageItems.map((n) => obsCardHtml(n.obs, n.reasons, undefined, evidenceHtml(n.obs.taxon, n.stateName))).join('')}</div>` +
       paginationHtml('user', 'notable', totalPages, totalCount, controls);
   }
 
@@ -3003,7 +3328,7 @@
     return { text: 'Lookup failed', cls: 'error' };
   }
 
-  function speciesCardHtml(entry, badges, recordKeyAttr) {
+  function speciesCardHtml(entry, badges, recordKeyAttr, extraHtml) {
     const t = entry.taxon;
     if (!t) return '';
     const img = photoUrl(t);
@@ -3022,7 +3347,7 @@
         <div class="obs-info">
           <div class="obs-name">${escapeHtml(common)}${showSci ? ` <span class="obs-sci">${escapeHtml(t.name)}</span>` : ''}</div>
           <div class="obs-meta">${entry.count} observation${entry.count === 1 ? '' : 's'} in ${escapeHtml(place ? place.name : '')}</div>
-          ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-record-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}
+          ${allBadges.length ? `<div class="badge-row">${allBadges.map((b) => `<span class="badge${b.cls ? ' ' + b.cls : ''}"${b.verify ? ' data-record-badge' : ''}>${escapeHtml(b.text)}</span>`).join('')}</div>` : ''}${extraHtml || ''}
         </div>
       </a>`;
   }
@@ -3088,7 +3413,7 @@
       ? `<div class="notable-link-row"><a class="secondary" href="${escapeHtml(placeNotableSearchUrl(filtered))}" target="_blank" rel="noopener">${linkLabel} ↗</a></div>`
       : '';
     container.innerHTML = controlsHtml + linkHtml +
-      `<div class="card-list">${pageItems.map((n) => speciesCardHtml(n, n.reasons)).join('')}</div>` +
+      `<div class="card-list">${pageItems.map((n) => speciesCardHtml(n, n.reasons, undefined, evidenceHtml(n.taxon, n.stateName))).join('')}</div>` +
       paginationHtml('place', 'notable', totalPages, totalCount, controls);
   }
 
@@ -3208,6 +3533,9 @@
     if (notableRerenderTimers[mode]) return;
     notableRerenderTimers[mode] = setTimeout(() => {
       notableRerenderTimers[mode] = null;
+      const box = el(mode === 'user' ? 'tab-notable' : 'tab-place-notable');
+      const a = document.activeElement;
+      if (box && a && box.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) { scheduleNotableRerender(mode); return; }
       if (mode === 'user') { renderNotable(); renderStats(); } else { renderPlaceNotable(); renderPlaceStats(); }
     }, 1000);
   }
@@ -3815,11 +4143,31 @@
     rerenderTab(tab);
   });
 
+  function openEvidenceLink(e) {
+    const link = e.target.closest && e.target.closest('.ev-link[data-href]');
+    if (!link) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(link.dataset.href, '_blank', 'noopener');
+    return true;
+  }
+  document.addEventListener('click', openEvidenceLink, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Enter') openEvidenceLink(e); }, true);
+
   // Notable view settings are shared by both modes' Notable tabs.
   document.addEventListener('change', (e) => {
     const catSel = e.target.closest('[data-notable-category]');
     const thresholdInput = e.target.closest('[data-notable-threshold]');
     const gbifBox = e.target.closest('[data-notable-gbif]');
+    const keyInput = e.target.closest('[data-ebird-key]');
+    if (keyInput) {
+      ebirdKey = keyInput.value.trim();
+      try { if (ebirdKey) localStorage.setItem('inat_ebird_key', ebirdKey); else localStorage.removeItem('inat_ebird_key'); } catch {}
+      ebirdMissing.clear(); ebirdLists.clear(); ebirdState.error = '';
+      refreshEbirdForLoaded();
+      renderNotable(); if (placeState.currentPlace) renderPlaceNotable();
+      return;
+    }
     if (!catSel && !thresholdInput && !gbifBox) return;
     if (gbifBox) notableSettings.useGbif = gbifBox.checked;
     if (catSel) notableSettings.category = catSel.value;

@@ -5280,8 +5280,8 @@
     const origin = copyField(location.origin, 'site address');
     const steps = {
       onedrive: [
-        { title: 'Open Microsoft app registrations', html: `<p>Sign in with the Microsoft account whose OneDrive you want to use. Personal Outlook/Hotmail accounts and work or school accounts both work.</p>${extLink('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', 'Open App registrations')}<p class="muted-note">If Microsoft asks you to create a free Azure account or directory first, follow its prompts. Registering an app costs nothing.</p>` },
-        { title: 'Register the app', html: `<ol><li>Click <strong>New registration</strong>.</li><li>Name: anything, e.g. <em>Louisiana Field Guides</em>.</li><li>Supported account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong>.</li><li>Redirect URI: choose the platform <strong>Single-page application (SPA)</strong> (not “Web”) and paste:</li></ol>${redirect}<p>Then click <strong>Register</strong>.</p>` },
+        { title: 'Open Microsoft app registrations', html: `<p>Sign in with your Microsoft account. Anyone can then sign in to the finished app with their own personal or work/school account.</p>${extLink('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', 'Open App registrations')}<p class="muted-note">Personal Outlook/Hotmail accounts can only register apps inside a directory. If <strong>New registration</strong> says registering outside a directory is deprecated, sign up for a free Azure account first (${'<a href="https://azure.microsoft.com/free/" target="_blank" rel="noopener">azure.microsoft.com/free</a>'}); it creates one. App registrations themselves are free.</p>` },
+        { title: 'Register the app', html: `<ol><li>Click <strong>New registration</strong>.</li><li>Name: anything, e.g. <em>Louisiana Field Guides</em>.</li><li>Supported account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong> (the portal may call it <em>Any Entra ID Tenant + Personal Microsoft accounts</em>). Not “Personal accounts only”: that choice makes sign-in fail with a misleading redirect_uri error.</li><li>Redirect URI: choose the platform <strong>Single-page application (SPA)</strong> (not “Web”) and paste:</li></ol>${redirect}<p>Then click <strong>Register</strong>.</p>` },
         { title: 'Allow OneDrive access', html: `<ol><li>Open <strong>API permissions</strong> → <strong>Add a permission</strong> → <strong>Microsoft Graph</strong> → <strong>Delegated permissions</strong>.</li><li>Tick these three, then <strong>Add permissions</strong>:</li></ol>${copyField('Files.ReadWrite.AppFolder')}${copyField('User.Read')}${copyField('offline_access')}<p class="muted-note">Files.ReadWrite.AppFolder only reaches this app's own folder (OneDrive › Apps), never your other files.</p>` },
         { title: 'Copy the client ID', html: `<p>Go back to <strong>Overview</strong> and copy the <strong>Application (client) ID</strong>. It looks like <code>1a2b3c4d-…-…</code>.</p>`, field: true },
       ],
@@ -5300,6 +5300,18 @@
       ],
     };
     return steps[id];
+  }
+
+  // Sign-in errors that point at a setup step, in words a person can act on.
+  function cloudErrorHint(id, err) {
+    const name = CLOUD_PROVIDERS[id].name, msg = String(err && err.message || err).replace(/\.$/, '');
+    let hint = 'If the sign-in page showed an error, reopen Setup and check each step.';
+    if (/redirect_uri|redirect uri|reply url/i.test(msg)) hint = id === 'onedrive'
+      ? 'Check the registration: the redirect URI must be a Single-page application entry exactly as shown in Setup, and Supported account types must include personal Microsoft accounts.'
+      : 'Check that the redirect URI in the app registration exactly matches the one shown in Setup.';
+    else if (/cross-origin|AADSTS9002326/i.test(msg)) hint = 'The redirect URI is registered under the “Web” platform; move it to “Single-page application”.';
+    else if (/unauthorized_client|not enabled for consumers|AADSTS700016/i.test(msg)) hint = 'Check the client ID and the supported account types in the registration.';
+    return `${name}: ${msg}. ${hint}`;
   }
 
   const wizard = { id: null, step: 0 };
@@ -5354,7 +5366,7 @@
     saveUserCloudConfig();
     renderCloud();
     // Still inside the click, so the sign-in pop-up isn't blocked.
-    cloudConnect(id).catch((err) => { setBackupStatus(`${CLOUD_PROVIDERS[id].name}: ${err.message.replace(/\.$/, '')}. If the sign-in page showed an error, reopen Setup and check each step.`); renderCloud(); });
+    cloudConnect(id).catch((err) => { setBackupStatus(cloudErrorHint(id, err)); renderCloud(); });
   });
   el('wizRemove').addEventListener('click', () => {
     const id = wizard.id;
@@ -5396,7 +5408,7 @@
         renderCloud();
       }
     } catch (err) {
-      setBackupStatus(`${name}: ${err.message}`);
+      setBackupStatus(action === 'connect' ? cloudErrorHint(id, err) : `${name}: ${err.message}`);
       renderCloud();
     }
   });
